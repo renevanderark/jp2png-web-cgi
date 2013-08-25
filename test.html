@@ -1,25 +1,63 @@
 <html>
 <head>
-<style>
-	img { float:left;}
-	br { clear: left; width: 100%}
-</style>
+
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" ></script>
 
 <script>
-	$.ajax("http://localhost/cgi-bin/test?f=/var/www/balloon.jp2", {success: function(data) {
+	var file = "/var/www/balloon.jp2";
+	function show(redux, data) {
 		var i = 0;
+		var loaded = 0;
+		var widest = 0;
+		var initTime = new Date().getTime();
+
+		$(".preview").html("");
 		for(var y = 0; y < data.th; y++) {
 			for(var x = 0; x < data.tw; x++) {
-				$("body").append($("<img>").attr("src", "http://localhost/cgi-bin/jp2?f=/var/www/balloon.jp2&r=4&t=" + i++)).on("load", function() { $(this).fadeIn() });
+				$(".preview").append(
+					$("<img>")
+						.attr("src", "http://localhost/cgi-bin/jp2?f=" + file + "&r=" + redux + "&t=" + i++).hide()
+						.on("load", function() {
+							if(this.width > widest) { widest = this.width; }
+							if(++loaded == data.th * data.tw) { 
+								$(".timed").html("DONE: " + (new Date().getTime() - initTime) + "ms");
+								$(".preview > img").show();
+								$(".preview").css({width: (data.tw * widest) + 5  + "px"})
+								$("button").prop("disabled", false);
+							} else {
+								$(".timed").html(Math.floor((loaded / (data.th * data.tw)) * 100) + "%");
+							}
+						})
+					);
 			}
-			$("body").append("<br>");
+			$(".preview").append("<br>");
 		}
-	}});
+	}
+
+
+	$(document).ready(function() {
+		$.ajax("http://localhost/cgi-bin/test?f=" + file, {success: function(data) {
+			var i = 0;
+
+			for(var i = 0; i < data["num_res"]; i++) {
+				(function(redux) {
+					$(".zoom-levels").append($("<button>").html(i).on("click", function(e) {
+						$("button").prop("disabled", true);
+						show(redux, data);
+					}));
+				})(i);
+			}
+		}});
+	});
 </script> 
 </head>
 
 <body>
+	Select reduction factor:
+	<div class="zoom-levels"></div>
+	<div class="timed"></div>
+	<div class="preview">
+	</div>
 </body>
 
 </html>

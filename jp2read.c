@@ -24,6 +24,8 @@
 
 typedef enum {GET_HEADER, READ_TILE} operation_t;
 
+#define MAX_ARGS 8
+
 struct params {
 	int tile_index;
 	int reduction_factor;
@@ -55,7 +57,7 @@ void parseParam(char k, char *v, struct params *p) {
 		case 'x': p->x = atoi(v); return;
 		case 'y': p->y = atoi(v); return;
 		case 'w': p->w = atoi(v); return;
-		case 'h': p->w = atoi(v); return;
+		case 'h': p->h = atoi(v); return;
 		case 'f': p->filename = v; return;
 		default: return;
 	}
@@ -65,9 +67,9 @@ struct params *parse(char *qstr) {
 	struct params *p = init_params();
 	int i = 0;
 	int j;
-	char *args[4];
+	char *args[MAX_ARGS];
 	args[i] = strtok(qstr, "&");
-	while(args[i++] && i < 4) {
+	while(args[i++] && i < MAX_ARGS) {
 		args[i] = strtok(NULL, "&");
 	}
 	
@@ -148,7 +150,7 @@ int main(int argc, char **argv) {
 			if(res.status == 0) {
 				puts("Content-type: image/png");
 				printf("Status: 200 OK\n\n");
-				writePNG(&res, "dynatile");
+				writePNG(&res, "dynatile", p->x, p->y, p->w, p->h);
 			} else {
 				puts("Content-type: application/json");
 				printf("Status: 500 Internal Server Error\n\n{\"error\": \"generic\"}");

@@ -16,6 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// PNG code: http://www.labbookpages.co.uk
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -30,14 +32,18 @@ inline void setRGB(png_byte *ptr, int r, int g, int b) {
 	ptr[0] = r; ptr[1] = g; ptr[2] = b;
 }
 
-int writePNG(struct opj_res *res, char *title) {
+int writePNG(struct opj_res *res, char *title, int xPos, int yPos, int w, int h) {
 	int code = 0;
+
+	if(xPos >= res->image->comps[0].w) { xPos = 0; }
+	if(yPos >= res->image->comps[0].h) { yPos = 0; }
+	if(w < 0 || xPos + w >= res->image->comps[0].w) { w =  res->image->comps[0].w - xPos; }
+	if(h < 0 || yPos + h >= res->image->comps[0].h) { h =  res->image->comps[0].h - yPos; }
 
 	png_structp png_ptr;
 	png_infop info_ptr;
 	png_bytep row;
 
-	// Initialize write structure
 	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if (png_ptr == NULL) {
 		error_callback("Could not allocate write struct\n", NULL);
@@ -45,7 +51,6 @@ int writePNG(struct opj_res *res, char *title) {
 		goto finalise;
 	}
 
-	// Initialize info structure
 	info_ptr = png_create_info_struct(png_ptr);
 	if (info_ptr == NULL) {
 		error_callback("Could not allocate info struct\n", NULL);
@@ -53,7 +58,6 @@ int writePNG(struct opj_res *res, char *title) {
 		goto finalise;
 	}
 
-	// Setup Exception handling
 	if (setjmp(png_jmpbuf(png_ptr))) {
 		error_callback("Error during png creation\n", NULL);
 		code = 1;
@@ -64,13 +68,11 @@ int writePNG(struct opj_res *res, char *title) {
 	png_init_io(png_ptr, stdout);
 
 
-	// Write header (8 bit colour depth)
-	png_set_IHDR(png_ptr, info_ptr, res->image->comps[0].w, res->image->comps[0].h,
+	png_set_IHDR(png_ptr, info_ptr, w, h,
 			8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
 			PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
 
-	// Set title
 	if (title != NULL) {
 		png_text title_text;
 		title_text.compression = PNG_TEXT_COMPRESSION_NONE;
@@ -81,20 +83,18 @@ int writePNG(struct opj_res *res, char *title) {
 
 	png_write_info(png_ptr, info_ptr);
 
-	// Allocate memory for one row (3 bytes per pixel - RGB)
-	row = (png_bytep) malloc(3 * res->image->comps[0].w * sizeof(png_byte));
+	row = (png_bytep) malloc(3 * w * sizeof(png_byte));
 
-	// Write image data
+	
 	int x, y;
-	for (y=0 ; y < res->image->comps[0].h ; y++) {
-		for (x=0 ; x < res->image->comps[0].w ; x++) {
+	for (y = yPos ; y < yPos + h ; y++) {
+		for (x = xPos ; x < xPos + w ; x++) {
 			int i = y * res->image->comps[0].w + x;
-			setRGB(&(row[x*3]), res->image->comps[0].data[i], res->image->comps[1].data[i], res->image->comps[2].data[i]);
+			setRGB(&(row[(x-xPos)*3]), res->image->comps[0].data[i], res->image->comps[1].data[i], res->image->comps[2].data[i]);
 		}
 		png_write_row(png_ptr, row);
 	}
 
-	// End write
 	png_write_end(png_ptr, NULL);
 
 	finalise:
