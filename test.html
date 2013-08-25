@@ -4,38 +4,50 @@
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" ></script>
 
 <script>
-	var file = "/var/www/balloon.jp2";
-	function show(redux, data) {
-		var i = 0;
-		var loaded = 0;
-		var widest = 0;
-		var initTime = new Date().getTime();
-
-		$(".preview").html("");
-		for(var y = 0; y < data.th; y++) {
-			for(var x = 0; x < data.tw; x++) {
-				$(".preview").append(
-					$("<img>")
-						.attr("src", "http://localhost/cgi-bin/jp2?f=" + file + "&r=" + redux + "&t=" + i++).hide()
-						.on("load", function() {
-							if(this.width > widest) { widest = this.width; }
-							if(++loaded == data.th * data.tw) { 
-								$(".timed").html("DONE: " + (new Date().getTime() - initTime) + "ms");
-								$(".preview > img").show();
-								$(".preview").css({width: (data.tw * widest) + 5  + "px"})
-								$("button").prop("disabled", false);
-							} else {
-								$(".timed").html(Math.floor((loaded / (data.th * data.tw)) * 100) + "%");
-							}
-						})
-					);
-			}
-			$(".preview").append("<br>");
-		}
-	}
-
-
 	$(document).ready(function() {
+		var file = "/var/www/balloon.jp2";
+		var can = $("canvas")[0];
+		var ctx = can.getContext('2d');
+		var bufcan = $("#buf")[0];
+		var buf = bufcan.getContext('2d');
+		function show(redux, data) {
+			ctx.clearRect(0, 0, can.width, can.height);
+			buf.clearRect(0, 0, can.width, can.height);
+			function reduce(val, reduction) {
+				if(reduction == 0) { return val; }
+				return reduce(val / 2, --reduction);
+			}
+
+			var loaded = 0;
+			var timed = new Date().getTime();
+			var th = reduce(data.tdy * data.th, redux) > can.height ? Math.ceil(can.height / reduce(data.tdy, redux)) : data.th;
+			var tw = reduce(data.tdx * data.tw, redux) > can.width ? Math.ceil(can.width / reduce(data.tdx, redux)) : data.tw;
+			for(var y = 0; y < th; y++) {
+				for(var x = 0; x < tw; x++) {
+					var img = new Image();
+					var tile = x + (y * data.tw);
+					img.src = "http://localhost/cgi-bin/jp2?f=" + 
+						file + 
+						"&r=" + redux + 
+						"&t=" + tile + 
+						"&x=0" + 
+						"&y=0";
+					(function(x,y) {
+						$(img).on("load", function() {
+							buf.drawImage(this, reduce(x * data.tdx, redux), reduce(y * data.tdy, redux));
+							$(".timed").html(Math.floor(loaded / (th * tw) * 100) + "%")
+							if(++loaded == th * tw) {
+								$(".timed").html("DONE: " + (new Date().getTime() - timed) + "ms");
+								$("button").prop("disabled", false);
+								ctx.drawImage(bufcan, 0, 0);
+							}
+						});
+					}) (x, y);
+				}
+			}
+		}
+
+
 		$.ajax("http://localhost/cgi-bin/test?f=" + file, {success: function(data) {
 			var i = 0;
 
@@ -56,8 +68,12 @@
 	Select reduction factor:
 	<div class="zoom-levels"></div>
 	<div class="timed"></div>
-	<div class="preview">
-	</div>
+	<canvas width="1024" height="500">
+	</canvas>
+
+	<canvas id="buf" style="display: none" width="1024" height="500">
+	</canvas>
+
 </body>
 
 </html>
