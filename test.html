@@ -7,11 +7,11 @@
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" ></script>
 
 <script>
-	$.ajax("http://localhost/cgi-bin/test?f=/home/parkupine/Downloads/DDD_010168412_001_access.jp2", {success: function(data) {
+	$.ajax("http://localhost/cgi-bin/test?f=/var/www/balloon.jp2", {success: function(data) {
 		var i = 0;
 		for(var y = 0; y < data.th; y++) {
 			for(var x = 0; x < data.tw; x++) {
-				$("body").append($("<img>").attr("src", "http://localhost/cgi-bin/jp2?f=/home/parkupine/Downloads/DDD_010168412_001_access.jp2&r=4&t=" + i++)).on("load", function() { $(this).fadeIn() });
+				$("body").append($("<img>").attr("src", "http://localhost/cgi-bin/jp2?f=/var/www/balloon.jp2&r=4&t=" + i++)).on("load", function() { $(this).fadeIn() });
 			}
 			$("body").append("<br>");
 		}
