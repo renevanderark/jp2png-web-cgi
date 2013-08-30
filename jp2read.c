@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <openjpeg.h>
 #include <string.h>
+#include <time.h>
 #include "opj_res.h"
 
 typedef enum {GET_HEADER, READ_TILE} operation_t;
@@ -138,8 +139,20 @@ int getJp2Specs (const char *filename, char *data) {
 	}
 }
 
+void getTime(char *tm) {
+	time_t rawtime;
+	struct tm * timeinfo;
+
+	time (&rawtime);
+	timeinfo = localtime (&rawtime);
+
+	strftime(tm, 50, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+}
+
 int main(int argc, char **argv) {
 	char data[255];
+	char timestamp[50];
+	getTime(timestamp);
 	struct opj_res res;
 	int status = READ_FAILURE;
 	struct params *p = parse(getenv("QUERY_STRING"));
@@ -149,6 +162,9 @@ int main(int argc, char **argv) {
 			res = getTile(p);
 			if(res.status == 0) {
 				puts("Content-type: image/png");
+				puts("Pragma: public");
+				puts("Cache-Control: max-age=360000");
+				printf("Last-Modified: %s\n", timestamp);
 				printf("Status: 200 OK\n\n");
 				writePNG(&res, "dynatile", p->x, p->y, p->w, p->h);
 			} else {
@@ -160,6 +176,9 @@ int main(int argc, char **argv) {
 		case GET_HEADER:
 			puts("Content-type: application/json");
 			if(status = getJp2Specs(p->filename, data)) {
+				puts("Pragma: public");
+				puts("Cache-Control: max-age=360000");
+				printf("Last-Modified: %s\n", timestamp);
 				printf("Status: 200 OK\n\n%s", data);
 			} else {
 				printf("Status: 500 Internal Server Error\n\n%s", data);

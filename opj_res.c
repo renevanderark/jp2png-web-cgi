@@ -48,8 +48,8 @@ struct opj_res opj_init(const char *fname, opj_dparameters_t *parameters) {
 		resources.status = 3;
 	}
 
-	opj_set_info_handler(resources.l_codec, info_callback,00);
-	opj_set_warning_handler(resources.l_codec, warning_callback,00);
+/*	opj_set_info_handler(resources.l_codec, info_callback,00);
+	opj_set_warning_handler(resources.l_codec, warning_callback,00);*/
 	opj_set_error_handler(resources.l_codec, error_callback,00);
 	return resources;
 }
