@@ -1,0 +1,23 @@
+<html>
+	<head>
+		<script type="text/javascript" src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+		<script type="text/javascript" src="jquery.mousewheel.js"></script>
+		<script type="text/javascript" src="jquery.jp2-viewer.js"></script>
+		<script type="text/javascript">
+			$(document).ready(function() {
+				$("canvas").jp2Viewer("/home/parkupine/work/jp2/res/DDD_010168412_001_access.jp2", {
+					workers: [
+						{ address: "http://localhost/cgi-bin/jp2", cores: 3 }
+					],
+					primary: "http://127.0.0.1/cgi-bin/jp2",
+					dataType: "jsonp"
+				});
+			});
+		</script>
+	</head>
+
+	<body>
+		<canvas width="1000" height="600">
+		</canvas>
+	</body>
+</html>
