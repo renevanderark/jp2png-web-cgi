@@ -18,6 +18,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include <openjpeg.h>
 #include "opj_res.h"
 
@@ -63,9 +64,9 @@ void opj_cleanup(struct opj_res *resources) {
 
 int is_jp2(FILE *fptr) {
 	unsigned char buf[12];
-	unsigned int l_nb_read;
+/*	unsigned int l_nb_read;*/
 
-	l_nb_read = fread(buf, 1, 12, fptr);
+	/*l_nb_read = */fread(buf, 1, 12, fptr);
 	fseek(fptr, 0, SEEK_SET);
 
 	int retval = memcmp(buf, JP2_RFC3745_MAGIC, 12) == 0 || memcmp(buf, JP2_MAGIC, 4) == 0;

@@ -16,5 +16,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-int writePNG(struct opj_res *res, char *title, int xPos, int yPos, int w, int h);
+void setRGB(png_byte *ptr, int r, int g, int b);
+int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, unsigned w, unsigned h);
 

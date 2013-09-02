@@ -28,17 +28,17 @@
 #include "opj2png.h"
 
 
-inline void setRGB(png_byte *ptr, int r, int g, int b) {
+void setRGB(png_byte *ptr, int r, int g, int b) {
 	ptr[0] = r; ptr[1] = g; ptr[2] = b;
 }
 
-int writePNG(struct opj_res *res, char *title, int xPos, int yPos, int w, int h) {
+int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, unsigned w, unsigned h) {
 	int code = 0;
 
 	if(xPos >= res->image->comps[0].w) { xPos = 0; }
 	if(yPos >= res->image->comps[0].h) { yPos = 0; }
-	if(w < 0 || xPos + w >= res->image->comps[0].w) { w =  res->image->comps[0].w - xPos; }
-	if(h < 0 || yPos + h >= res->image->comps[0].h) { h =  res->image->comps[0].h - yPos; }
+	if(xPos + w >= res->image->comps[0].w) { w =  res->image->comps[0].w - xPos; }
+	if(yPos + h >= res->image->comps[0].h) { h =  res->image->comps[0].h - yPos; }
 
 	png_structp png_ptr;
 	png_infop info_ptr;
@@ -86,7 +86,7 @@ int writePNG(struct opj_res *res, char *title, int xPos, int yPos, int w, int h)
 	row = (png_bytep) malloc(3 * w * sizeof(png_byte));
 
 	
-	int x, y;
+	unsigned x, y;
 	for (y = yPos ; y < yPos + h ; y++) {
 		for (x = xPos ; x < xPos + w ; x++) {
 			int i = y * res->image->comps[0].w + x;
@@ -98,7 +98,10 @@ int writePNG(struct opj_res *res, char *title, int xPos, int yPos, int w, int h)
 	png_write_end(png_ptr, NULL);
 
 	finalise:
-	if (info_ptr != NULL) png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
+	if (info_ptr != NULL) {
+		png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
+		free(info_ptr);
+	}
 	if (png_ptr != NULL) png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
 	if (row != NULL) free(row);
 

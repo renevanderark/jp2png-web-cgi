@@ -21,24 +21,36 @@
 #include <openjpeg.h>
 #include <string.h>
 #include <time.h>
+#include <png.h>
 #include "opj_res.h"
+#include "opj2png.h"
+#include "urldecode.h"
 
 typedef enum {GET_HEADER, READ_TILE} operation_t;
 
-#define MAX_ARGS 8
+#define MAX_ARGS 9
 
 struct params {
 	int tile_index;
 	int reduction_factor;
 	char *filename;
+	char *jsonp_callback;
 	operation_t operation;
-	int x;
-	int y;
-	int w;
-	int h;
+	unsigned x;
+	unsigned y;
+	unsigned w;
+	unsigned h;
 };
 
-struct params *init_params() {
+struct params *init_params(void);
+void parseParam(char k, char *v, struct params *p);
+struct params *parse(char *qstr);
+struct opj_res getTile(struct params *p);
+int getJp2Specs (const char *filename, char *data);
+void getTime(char *tm);
+
+
+struct params *init_params(void) {
 	struct params *p = malloc(sizeof(struct params));
 	p->tile_index = 0;
 	p->reduction_factor = 0;
@@ -48,6 +60,7 @@ struct params *init_params() {
 	p->h = -1;
 	p->operation = GET_HEADER;
 	p->filename = NULL;
+	p->jsonp_callback = NULL;
 	return p;
 }
 
@@ -59,7 +72,8 @@ void parseParam(char k, char *v, struct params *p) {
 		case 'y': p->y = atoi(v); return;
 		case 'w': p->w = atoi(v); return;
 		case 'h': p->h = atoi(v); return;
-		case 'f': p->filename = v; return;
+		case 'f': p->filename = url_decode(v); return;
+		case 'c': p->jsonp_callback = url_decode(v); return;
 		default: return;
 	}
 }
@@ -105,8 +119,6 @@ struct opj_res getTile(struct params *p) {
 
 
 int getJp2Specs (const char *filename, char *data) {
-	int i = 0;
-
 	FILE *fptr = fopen(filename, "rb");
 	if(fptr != NULL && is_jp2(fptr)) {
 		opj_dparameters_t parameters;
@@ -149,7 +161,7 @@ void getTime(char *tm) {
 	strftime(tm, 50, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
 }
 
-int main(int argc, char **argv) {
+int main(void) {
 	char data[255];
 	char timestamp[50];
 	getTime(timestamp);
@@ -175,11 +187,16 @@ int main(int argc, char **argv) {
 			break;
 		case GET_HEADER:
 			puts("Content-type: application/json");
-			if(status = getJp2Specs(p->filename, data)) {
+			if( (status = getJp2Specs(p->filename, data)) ) {
 				puts("Pragma: public");
 				puts("Cache-Control: max-age=360000");
 				printf("Last-Modified: %s\n", timestamp);
-				printf("Status: 200 OK\n\n%s", data);
+				puts("Status: 200 OK\n\n");
+				if(p->jsonp_callback != NULL) {
+					printf("%s(%s);", p->jsonp_callback, data);
+				} else {
+					printf("%s", data);
+				}
 			} else {
 				printf("Status: 500 Internal Server Error\n\n%s", data);
 			}
@@ -187,7 +204,8 @@ int main(int argc, char **argv) {
 		default:
 			;
 	}
-
+	if(p->filename != NULL) { free(p->filename); }
+	if(p->jsonp_callback != NULL) { free(p->jsonp_callback); }
 	free(p);
 	return status;
 }
