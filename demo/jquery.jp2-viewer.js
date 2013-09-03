@@ -31,11 +31,14 @@
 			if(dragging) {
 				var movX = curX - e.clientX;
 				var movY = curY - e.clientY;
+				var oldX = xPos;
+				var oldY = yPos;
 				xPos -= movX;
 				yPos -= movY;
-
 				ensureBounds();
-				showImage();
+				if(oldX != xPos || oldY != yPos) {
+					showImage();
+				}
 				curX = e.clientX;
 				curY = e.clientY;
 			}
@@ -97,13 +100,29 @@
 		}
 
 		function drawTile(tile) {
+			if(tile.dims.r != reduction) { return; }
 			if(tile.img.complete) {
 				tiles2go--;
-				ctx.drawImage(tile.img, 0,0, tile.img.width, tile.img.height, tile.dims.x, tile.dims.y, Math.ceil(tile.img.width * tile.dims.s), Math.ceil(tile.img.height * tile.dims.s));
+				ctx.drawImage(
+					tile.img, tile.dims.x, tile.dims.y, 
+					Math.ceil(tile.img.width * tile.dims.s), 
+					Math.ceil(tile.img.height * tile.dims.s));
 			} else {
+				ctx.clearRect(tile.dims.x, tile.dims.y, jp2Header.tdx * tile.dims.s, jp2Header.tdy * tile.dims.s);
 				setTimeout(function() { drawTile(tile); }, 1);
 			}
-			if(tiles2go == 0) { tiles2go = 1; showImage();}
+			if(tiles2go == 0) { tiles2go = 1; clearSurroundings(); showImage();}
+		}
+
+		function clearSurroundings() {
+			if(jp2Header.x1 * scale <= canvas.width) { 
+				ctx.clearRect(0,0, xPos, canvas.height);
+				ctx.clearRect(canvas.width - xPos - 1, 0, xPos, canvas.height);
+			}
+
+			if(jp2Header.y1 * scale <= canvas.height) { 
+				ctx.clearRect(0, jp2Header.y1 * scale, canvas.width, canvas.height - jp2Header.y1 * scale);
+			}
 		}
 
 		function showImage() {
@@ -119,15 +138,6 @@
 			if(tileX + tilesX > jp2Header.tw)  { tilesX = jp2Header.tw - tileX; }
 			if(tileY + tilesY > jp2Header.th)  { tilesY = jp2Header.th - tileY; }
 
-			if(jp2Header.x1 * scale <= canvas.width) { 
-				ctx.clearRect(0,0, xPos, canvas.height);
-				ctx.clearRect(canvas.width - xPos, 0, xPos, canvas.height);
-			}
-
-			if(jp2Header.y1 * scale <= canvas.height) { 
-				ctx.clearRect(0, jp2Header.y1 * scale, canvas.width, canvas.height - jp2Header.y1 * scale);
-			}
-
 			tiles2go = tilesX * tilesY;
 			for(var x = tileX; x < tileX + tilesX; x++) {
 				for(var y = tileY; y < tileY + tilesY; y++) {
@@ -138,7 +148,8 @@
 						tiles["redux-" + reduction][tileIndex].dims = { 
 							x: xPos + Math.floor(x * (jp2Header.tdx * scale)), 
 							y: yPos + Math.floor(y * (jp2Header.tdy * scale)),
-							s: tileS
+							s: tileS,
+							r: reduction
 						};
 
 						drawTile(tiles["redux-" + reduction][tileIndex]); 
@@ -148,7 +159,8 @@
 							dims:  { 
 								x: xPos + Math.floor(x * (jp2Header.tdx * scale)), 
 								y: yPos + Math.floor(y * (jp2Header.tdy * scale)),
-								s: tileS
+								s: tileS,
+								r: reduction
 							}
 						}
 						tiles["redux-" + reduction][tileIndex] = tile;
@@ -157,35 +169,31 @@
 							t: tileIndex,
 							r: reduction
 						});
+						(function(t) {
+							$(tile.img).on("error", function() {
+								console.log("TODO, retry on erronaous tile: ", t);
+							});
+						})(tile);
+
 						drawTile(tile);
 					}
 
 					if(++currentWorker == workers.length) { currentWorker = 0; }
 				}
 			}
+			clearSurroundings();
+
 		}
 
 		function initialize(__init) {
-			jp2Header = __init || jp2Header ;
-
+			jp2Header = __init || jp2Header;
 			setScale(initScale);
 			setReduction();
 			if(__init) { initializeTiles(); }
-
 			ensureBounds();
+			clearSurroundings();
 			showImage();
-			if(jp2Header.x1 * scale <= canvas.width) { 
-				ctx.clearRect(0,0, xPos, canvas.height);
-				ctx.clearRect(canvas.width - xPos, 0, xPos, canvas.height);
-			}
-
-			if(jp2Header.y1 * scale <= canvas.height) { 
-				ctx.clearRect(0, jp2Header.y1 * scale, canvas.width, canvas.height - jp2Header.y1 * scale);
-			}
-
 		}
-
-
 
 		$.ajax(primary, {
 			data: { f: filename },
