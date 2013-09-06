@@ -7,17 +7,17 @@
 			$(document).ready(function() {
 				$("canvas").jp2Viewer("/var/www/balloon.jp2", {
 					workers: [
-						{ address: "http://localhost/cgi-bin/jp2", cores: 3 }
+						{ address: "http://localhost/cgi-bin/jp2", cores: 1 }
 					],
-					primary: "http://127.0.0.1/cgi-bin/jp2",
-					dataType: "jsonp"
+					primary: "http://localhost/cgi-bin/jp2",
+					dataType: "json"
 				});
 			});
 		</script>
 	</head>
 
 	<body>
-		<canvas width="1000" height="600">
+		<canvas width="1800" height="700">
 		</canvas>
 	</body>
 </html>
