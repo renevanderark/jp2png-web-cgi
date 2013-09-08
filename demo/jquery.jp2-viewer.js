@@ -248,8 +248,8 @@ window.requestAnimFrame = (function(){
 		}
 
 		function monitorTiles() {
-			if(!jp2Header) { return; }
 			requestAnimFrame(monitorTiles);
+			if(!jp2Header) { return; }
 			if(loadTrigger) { loadImage(); loadTrigger = false; }
 			drawIncompleteTiles();
 			if(incompleteTiles.length == 0) {
