@@ -15,7 +15,7 @@ window.requestAnimFrame = (function(){
 		var ctx = canvas.getContext('2d');
 		var bufcan = $("<canvas>").get(0);
 		var buffer = bufcan.getContext('2d');
-/*		$("body").append(bufcan);*/
+		$("body").append($(bufcan).css({"border": "1px solid"}));
 
 		var dataType = opts.dataType || "json";
 		var primary = opts.primary || "http://" + window.location.hostname + "/cgi-bin/jp2";
@@ -31,6 +31,7 @@ window.requestAnimFrame = (function(){
 		var currentWorker = 0;
 		var xPos = 0;
 		var yPos = 0;
+		var rotation = 0;
 		var curX;
 		var curY;
 		var oldX;
@@ -57,6 +58,13 @@ window.requestAnimFrame = (function(){
 			if(dragging) {
 				var movX = curX - e.clientX;
 				var movY = curY - e.clientY;
+				switch(rotation) {
+					case 90: var swp = movX; movX = movY; movY = -swp; break;
+					case 180: movX = -movX; movY = -movY; break;
+					case 270: var swp = movX; movX = -movY; movY = swp; break;
+					default:
+				}
+
 				xPos -= movX;
 				yPos -= movY;
 				ensureBounds();
@@ -82,13 +90,26 @@ window.requestAnimFrame = (function(){
 			}
 		});
 
+		this.on("setrotation", function(e, rot) {
+			rotation = rot;
+			if(rotation == 90 || rotation == 270) {
+				bufcan.width = canvas.height;
+				bufcan.height = canvas.width;
+			} else {
+				bufcan.width = canvas.width;
+				bufcan.height = canvas.height;
+			}
+			ensureBounds();
+			loadImage();
+		});
+
 		function ensureBounds() {
-			if(xPos + (jp2Header.x1 * scale) <= canvas.width) { xPos = canvas.width - (jp2Header.x1 * scale); }
-			if(yPos + (jp2Header.y1 * scale) <= canvas.height) { yPos = canvas.height - (jp2Header.y1 * scale); }
+			if(xPos + (jp2Header.x1 * scale) <= bufcan.width) { xPos = bufcan.width - (jp2Header.x1 * scale); }
+			if(yPos + (jp2Header.y1 * scale) <= bufcan.height) { yPos = bufcan.height - (jp2Header.y1 * scale); }
 			if(xPos > 0) { xPos = 0; }
 			if(yPos > 0) { yPos = 0; }
-			if(jp2Header.x1 * scale <= canvas.width) { 
-				xPos = Math.floor((canvas.width - jp2Header.x1 * scale) / 2);
+			if(jp2Header.x1 * scale <= bufcan.width) { 
+				xPos = Math.floor((bufcan.width - jp2Header.x1 * scale) / 2);
 			}
 		}
 
@@ -136,21 +157,24 @@ window.requestAnimFrame = (function(){
 			}
 		}
 
-		function clearSurroundings() {
+		function clearSurroundings(xCorrection, yCorrection) {
 			if(jp2Header.x1 * scale <= canvas.width) { 
-				ctx.clearRect(0,0, xPos, canvas.height);
-				ctx.clearRect(canvas.width - xPos - 1, 0, xPos + 1, canvas.height);
+				ctx.clearRect(xCorrection || 0, yCorrection ||	 0, xPos, canvas.height);
+				ctx.clearRect(canvas.width - xPos - 1 + (xCorrection || 0), (yCorrection || 0), xPos + 1, canvas.height);
 			}
 
 			if(jp2Header.y1 * scale <= canvas.height) { 
-				ctx.clearRect(0, jp2Header.y1 * scale, canvas.width, canvas.height - jp2Header.y1 * scale);
+				ctx.clearRect((xCorrection || 0), (yCorrection || 0) + jp2Header.y1 * scale, canvas.width, canvas.height - jp2Header.y1 * scale);
 			}
 		}
 
 		function loadImage(_hidden) {
 			var tileS = scale / reduce(1.0, reduction);
-			var tilesX = Math.ceil(canvas.width / (jp2Header.tdx * scale)) + 1;
-			var tilesY = Math.ceil(canvas.height / (jp2Header.tdy * scale)) + 1;
+			var ch = canvas.height;
+			var cw = canvas.width;
+			if(rotation == 90 || rotation == 270) { var swp = cw; cw = ch; ch = swp; }
+			var tilesX = Math.ceil(cw / (jp2Header.tdx * scale)) + 1;
+			var tilesY = Math.ceil(ch / (jp2Header.tdy * scale)) + 1;
 			var tileX = Math.floor(-xPos / (jp2Header.tdx * scale));
 			var tileY = Math.floor(-yPos / (jp2Header.tdy * scale));
 
@@ -211,8 +235,13 @@ window.requestAnimFrame = (function(){
 		}
 
 		function showImage() {
-			ctx.drawImage(bufcan, 0, 0);
-			clearSurroundings();
+			ctx.save();
+			ctx.translate(canvas.width / 2, canvas.height / 2);
+			ctx.rotate(rotation * (Math.PI / 180));
+			ctx.drawImage(bufcan, -bufcan.width / 2, -bufcan.height / 2);
+			clearSurroundings(-bufcan.width / 2, -bufcan.height / 2);
+
+			ctx.restore();
 		}
 
 		function drawIncompleteTiles() {
