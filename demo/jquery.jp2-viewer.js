@@ -99,6 +99,7 @@ window.requestAnimFrame = (function(){
 				bufcan.width = canvas.width;
 				bufcan.height = canvas.height;
 			}
+			buffer.fillStyle = opts.backgroundColor || "#aaa";
 			ensureBounds();
 			loadImage();
 		});
