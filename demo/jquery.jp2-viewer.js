@@ -15,7 +15,7 @@ window.requestAnimFrame = (function(){
 		var ctx = canvas.getContext('2d');
 		var bufcan = $("<canvas>").get(0);
 		var buffer = bufcan.getContext('2d');
-		$("body").append($(bufcan).css({"border": "1px solid"}));
+//		$("body").append($(bufcan).css({"border": "1px solid"}));
 
 		var dataType = opts.dataType || "json";
 		var primary = opts.primary || "http://" + window.location.hostname + "/cgi-bin/jp2";
@@ -43,7 +43,7 @@ window.requestAnimFrame = (function(){
 
 		bufcan.width = canvas.width;
 		bufcan.height = canvas.height;
-		buffer.fillStyle = opts.backgroundColor || "#aaa";
+		ctx.fillStyle = buffer.fillStyle = opts.backgroundColor || "#aaa";
 
 
 		this.on("mousedown", function(e) {
@@ -158,13 +158,19 @@ window.requestAnimFrame = (function(){
 		}
 
 		function clearSurroundings(xCorrection, yCorrection) {
-			if(jp2Header.x1 * scale <= canvas.width) { 
-				ctx.clearRect(xCorrection || 0, yCorrection ||	 0, xPos, canvas.height);
-				ctx.clearRect(canvas.width - xPos - 1 + (xCorrection || 0), (yCorrection || 0), xPos + 1, canvas.height);
+			var ch = canvas.height;
+			var cw = canvas.width;
+			if(rotation == 90 || rotation == 270) {
+				cw = canvas.height;
+				ch = canvas.width;
+			}
+			if(jp2Header.x1 * scale <= cw) { 
+				ctx.clearRect(xCorrection || 0, yCorrection ||	 0, xPos, ch);
+				ctx.clearRect(cw - xPos - 1 + (xCorrection || 0), (yCorrection || 0), xPos + 1, ch);
 			}
 
-			if(jp2Header.y1 * scale <= canvas.height) { 
-				ctx.clearRect((xCorrection || 0), (yCorrection || 0) + jp2Header.y1 * scale, canvas.width, canvas.height - jp2Header.y1 * scale);
+			if(jp2Header.y1 * scale <= ch) { 
+				ctx.clearRect((xCorrection || 0), (yCorrection || 0) + jp2Header.y1 * scale, cw, ch - jp2Header.y1 * scale);
 			}
 		}
 
