@@ -52,6 +52,8 @@ window.requestAnimFrame = (function(){
 			curY = e.clientY;
 			oldX = xPos;
 			oldY = yPos;
+			$(this).css({ cursor: "move" });
+			return false;
 		});
 
 		this.on("mousemove", function(e) {
@@ -78,6 +80,8 @@ window.requestAnimFrame = (function(){
 		this.on("mouseup mouseout", function(e) {
 			if(oldX != xPos || oldY != yPos) { loadTrigger = true; }
 			dragging = false;
+			$(this).css({ cursor: "default" });
+			return false;
 		});
 
 		this.on("mousewheel", function(e, delta, deltaX, deltaY) {
@@ -88,6 +92,7 @@ window.requestAnimFrame = (function(){
 				initScale = scale * 0.9;
 				initialize();
 			}
+			return false;
 		});
 
 		this.on("setrotation", function(e, rot) {
@@ -112,6 +117,10 @@ window.requestAnimFrame = (function(){
 			if(jp2Header.x1 * scale <= bufcan.width) { 
 				xPos = Math.floor((bufcan.width - jp2Header.x1 * scale) / 2);
 			}
+			if(jp2Header.y1 * scale <= bufcan.height) { 
+				yPos = Math.floor((bufcan.height - jp2Header.y1 * scale) / 2);
+			}
+
 		}
 
 		function reduce(val, reduction) {
@@ -171,7 +180,8 @@ window.requestAnimFrame = (function(){
 			}
 
 			if(jp2Header.y1 * scale <= ch) { 
-				ctx.clearRect((xCorrection || 0), (yCorrection || 0) + jp2Header.y1 * scale, cw, ch - jp2Header.y1 * scale);
+				ctx.clearRect(xCorrection || 0, yCorrection || 0, cw, yPos);
+				ctx.clearRect((xCorrection || 0), ch - yPos - 1 + (yCorrection || 0), cw, yPos + 1);
 			}
 		}
 
