@@ -10,6 +10,50 @@ window.requestAnimFrame = (function(){
 
 
 (function ( $ ) {
+
+
+	$.fn.jp2ViewerEvents = function(opts) {
+		var curX;
+		var curY;
+		var dragging = false;
+
+		this.on("mousedown", function(e) {
+			dragging = true;
+			curX = e.clientX;
+			curY = e.clientY;
+
+			$(this).css({ cursor: "move" });
+			return false;
+		});
+
+		this.on("mousemove", function(e) {
+			if(dragging) {
+				$(this).trigger("moveBy", { 
+					x: curX - e.clientX, 
+					y: curY - e.clientY
+				});
+				curX = e.clientX;
+				curY = e.clientY;
+			}
+		});
+
+		this.on("mouseup mouseout", function(e) {
+			dragging = false;
+			$(this).css({ cursor: "default" });
+			return false;
+		});
+
+		this.on("mousewheel", function(e, delta, deltaX, deltaY) {
+			if(delta > 0) {
+				$(this).trigger("scaleBy", 1.1);
+			} else if(delta < 0) {
+				$(this).trigger("scaleBy", 0.9);
+			}
+			return false;
+		});
+		return this;
+	};
+
 	$.fn.jp2Viewer = function(filename, opts) {
 		var canvas = this.get(0);
 		var ctx = canvas.getContext('2d');
@@ -31,12 +75,11 @@ window.requestAnimFrame = (function(){
 		var currentWorker = 0;
 		var xPos = 0;
 		var yPos = 0;
-		var rotation = 0;
-		var curX;
-		var curY;
 		var oldX;
 		var oldY;
-		var dragging = false;
+
+		var rotation = 0;
+
 		var loadTrigger = false;
 		var showTrigger = false;
 		var incompleteTiles = [];
@@ -45,57 +88,36 @@ window.requestAnimFrame = (function(){
 		bufcan.height = canvas.height;
 		ctx.fillStyle = buffer.fillStyle = opts.backgroundColor || "#aaa";
 
-
-		this.on("mousedown", function(e) {
-			dragging = true;
-			curX = e.clientX;
-			curY = e.clientY;
-			oldX = xPos;
-			oldY = yPos;
-			$(this).css({ cursor: "move" });
-			return false;
-		});
-
-		this.on("mousemove", function(e) {
-			if(dragging) {
-				var movX = curX - e.clientX;
-				var movY = curY - e.clientY;
-				switch(rotation) {
-					case 90: var swp = movX; movX = movY; movY = -swp; break;
-					case 180: movX = -movX; movY = -movY; break;
-					case 270: var swp = movX; movX = -movY; movY = swp; break;
-					default:
-				}
-
-				xPos -= movX;
-				yPos -= movY;
-				ensureBounds();
-				showImage();
-				if(oldX != xPos || oldY != yPos) { loadTrigger = true; }
-				curX = e.clientX;
-				curY = e.clientY;
+		this.on("moveBy", function(e, dims) {
+			var movX = dims.x;
+			var movY = dims.y;
+			switch(rotation) {
+				case 90: var swp = movX; movX = movY; movY = -swp; break;
+				case 180: movX = -movX; movY = -movY; break;
+				case 270: var swp = movX; movX = -movY; movY = swp; break;
+				default:
 			}
+
+			xPos -= movX;
+			yPos -= movY;
+			ensureBounds();
+			showImage();
+			loadTrigger = true;
 		});
 
-		this.on("mouseup mouseout", function(e) {
-			if(oldX != xPos || oldY != yPos) { loadTrigger = true; }
-			dragging = false;
-			$(this).css({ cursor: "default" });
-			return false;
+		this.on("scaleBy", function(e, s) {
+			initScale = scale * s;
+			initialize();
 		});
 
-		this.on("mousewheel", function(e, delta, deltaX, deltaY) {
-			if(delta > 0) {
-				initScale = scale * 1.1;
-				initialize();
-			} else if(delta < 0) {
-				initScale = scale * 0.9;
-				initialize();
-			}
-			return false;
+		this.on("rotateBy", function(e, rot) {
+			rot = rotation + rot;
+			if(rot < 0)  { rot = 270; }
+			if(rot > 270) { rot = 0; }
+			setRotation(rot);
 		});
 
-		this.on("setrotation", function(e, rot) {
+		function setRotation(rot) {
 			rotation = rot;
 			if(rotation == 90 || rotation == 270) {
 				bufcan.width = canvas.height;
@@ -107,7 +129,7 @@ window.requestAnimFrame = (function(){
 			buffer.fillStyle = opts.backgroundColor || "#aaa";
 			ensureBounds();
 			loadImage();
-		});
+		}
 
 		function ensureBounds() {
 			if(xPos + (jp2Header.x1 * scale) <= bufcan.width) { xPos = bufcan.width - (jp2Header.x1 * scale); }
@@ -310,5 +332,6 @@ window.requestAnimFrame = (function(){
 			dataType: opts.dataType,
 			success: initialize
 		});
+		return this;
 	};
 }( jQuery ));
