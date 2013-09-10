@@ -1,4 +1,3 @@
-// shim layer with setTimeout fallback
 window.requestAnimFrame = (function(){
 	return window.requestAnimationFrame       ||
 		window.webkitRequestAnimationFrame ||
@@ -11,6 +10,75 @@ window.requestAnimFrame = (function(){
 
 (function ( $ ) {
 	$.fn.jp2MinimapEvents = function(opts) {
+		if(!opts.viewer) { return; }
+		var viewerScale;
+		var viewerPosition;
+		var _self = this;
+		var dragging = false;
+		var scale = 1.0;
+		var rect;
+
+		var viewerDimensions = {
+			w: opts.viewer.get(0).width,
+			h: opts.viewer.get(0).height
+		};
+
+		this.on("mousedown", function(e) {
+			dragging = true;
+			$(this).css({ cursor: "move" });
+			return false;
+		});
+
+		this.on("mousedown mousemove", function(e) {
+			if(dragging) {
+				var x = (e.pageX - _self.offset().left) + $(window).scrollLeft() - ((rect.w * scale) / 2);
+				var y = (e.pageY - _self.offset().top) + $(window).scrollTop() - ((rect.h * scale) / 2);
+				opts.viewer.trigger("moveTo", { 
+					x: Math.floor(x / scale), 
+					y: Math.floor(y / scale)
+				});
+			}
+			return false;
+		});
+
+		this.on("mouseup mouseout", function(e) {
+			dragging = false;
+			$(this).css({ cursor: "default" });
+			return false;
+		});
+
+		this.on("fullyLoaded", function(e, props) {
+			scale = props.scale;
+			drawRect();
+		});
+
+		this.on("setViewerProperties", function(e, props) {
+			viewerScale = props.scale;
+			viewerPosition = props.pos;
+			viewerRotation = props.rot;
+			drawRect();
+		});
+
+		function drawRect() {
+			_self.trigger("refresh");
+			rect = {
+				x: Math.floor(viewerPosition.x > 0 ? 0 : -(viewerPosition.x) / viewerScale),
+				y: Math.floor(viewerPosition.y > 0 ? 0 : -(viewerPosition.y) / viewerScale),
+				w: Math.ceil(viewerDimensions.w / viewerScale),
+				h: Math.ceil(viewerDimensions.h / viewerScale)
+			};
+
+			switch(viewerRotation) {
+				case 90: 
+				case 270: 
+					var swp1 = rect.w; rect.w = rect.h; rect.h = swp1; 
+					break;
+				default:
+			}
+
+
+			_self.trigger("drawRect", rect);
+		}
 
 		return this;
 	};
@@ -68,6 +136,7 @@ window.requestAnimFrame = (function(){
 		var primary = opts.primary || "http://" + window.location.hostname + "/cgi-bin/jp2";
 		var workers = opts.workers || [{address: primary, cores: 1}]; 
 		var initScale = opts.initScale || "full-width";
+		var _self = this;
 
 		var jp2Header = false;
 		var tiles = {};
@@ -108,6 +177,14 @@ window.requestAnimFrame = (function(){
 			loadTrigger = true;
 		});
 
+		this.on("moveTo", function(e, realPos) {
+			xPos = -realPos.x * scale;
+			yPos = -realPos.y * scale;
+			ensureBounds();
+			showImage();
+			loadTrigger = true;
+		});
+
 		this.on("scaleBy", function(e, s) {
 			initScale = scale * s;
 			initialize();
@@ -118,6 +195,16 @@ window.requestAnimFrame = (function(){
 			if(rot < 0)  { rot = 270; }
 			if(rot > 270) { rot = 0; }
 			setRotation(rot);
+		});
+
+		this.on("refresh", function(e) { 
+			showImage();
+		});
+
+		this.on("drawRect", function(e, realDims) {
+			ctx.beginPath();
+			ctx.rect(realDims.x * scale, realDims.y * scale, realDims.w * scale, realDims.h * scale);
+			ctx.stroke();
 		});
 
 		function setRotation(rot) {
@@ -283,13 +370,25 @@ window.requestAnimFrame = (function(){
 			ctx.rotate(rotation * (Math.PI / 180));
 			ctx.drawImage(bufcan, -bufcan.width / 2, -bufcan.height / 2);
 			clearSurroundings(-bufcan.width / 2, -bufcan.height / 2);
-
 			ctx.restore();
+
+			if(opts.miniMap) { updateMinimap(); }
+		}
+
+		function updateMinimap() {
+			opts.miniMap.trigger("setViewerProperties", {
+				scale: scale, 
+				pos: {x: xPos, y: yPos},
+				rot: rotation
+			}); 
 		}
 
 		function drawIncompleteTiles() {
 			var i = incompleteTiles.length;
-			if(i == 0) { return; }
+			if(i == 0) { 
+				_self.trigger("fullyLoaded", { scale: scale });
+				return; 
+			}
 			while(--i > -1) {
 				if(incompleteTiles[i].img.complete) {
 					incompleteTiles[i].dims.x = xPos + Math.floor(incompleteTiles[i].dims.tx * (jp2Header.tdx * scale));

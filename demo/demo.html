@@ -13,24 +13,18 @@
 				};
 
 				$("canvas#big")
-					.jp2Viewer("/var/www/balloon.jp2", $.extend({
-							miniMap: $("canvas#mini")
-						}, baseOpts))
-						.jp2ViewerEvents();
+					.jp2Viewer("/home/parkupine/Downloads/DDD_010168412_003_access.jp2", $.extend({miniMap: $("canvas#mini")}, baseOpts))
+					.jp2ViewerEvents();
 
 				$("canvas#mini")
-					.jp2Viewer("/var/www/balloon.jp2", $.extend({
-							initScale: "full-height",
-							wrapImage: true,
-							viewer: $("canvas#big")
-						}, baseOpts))
-						.jp2MinimapEvents();
+					.jp2Viewer("/home/parkupine/Downloads/DDD_010168412_003_access.jp2", $.extend({ initScale: "full-height", wrapImage: true }, baseOpts))
+					.jp2MinimapEvents({ viewer: $("canvas#big")});
 			});
 		</script>
 	</head>
 
 	<body>
-		<canvas id="big" width="800" height="700" style="float: left; border: 1px solid">
+		<canvas id="big" width="800" height="500" style="float: left; border: 1px solid">
 		</canvas>
 		<canvas id="mini" width="150" height="150" style="float: left; border: 1px solid">
 		</canvas>
