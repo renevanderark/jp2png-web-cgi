@@ -269,6 +269,7 @@ window.requestAnimFrame = (function(){
 			setScale(initScale);
 			setReduction();
 			if(__init) { initializeTiles(); }
+			if(opts.wrapImage) { canvas.height = jp2Header.y1 * scale; canvas.width = jp2Header.x1 * scale; }
 			ensureBounds();
 			loadImage();
 		}
