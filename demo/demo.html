@@ -13,13 +13,18 @@
 				};
 
 				$("canvas#big")
-					.jp2Viewer("/var/www/balloon.jp2", baseOpts).jp2ViewerEvents();
+					.jp2Viewer("/var/www/balloon.jp2", $.extend({
+							miniMap: $("canvas#mini")
+						}, baseOpts))
+						.jp2ViewerEvents();
 
 				$("canvas#mini")
 					.jp2Viewer("/var/www/balloon.jp2", $.extend({
-						initScale: "full-height",
-						wrapImage: true
-					}, baseOpts));
+							initScale: "full-height",
+							wrapImage: true,
+							viewer: $("canvas#big")
+						}, baseOpts))
+						.jp2MinimapEvents();
 			});
 		</script>
 	</head>

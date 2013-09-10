@@ -10,7 +10,10 @@ window.requestAnimFrame = (function(){
 
 
 (function ( $ ) {
+	$.fn.jp2MinimapEvents = function(opts) {
 
+		return this;
+	};
 
 	$.fn.jp2ViewerEvents = function(opts) {
 		var curX;
