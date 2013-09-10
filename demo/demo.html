@@ -13,11 +13,11 @@
 				};
 
 				$("canvas#big")
-					.jp2Viewer("/home/parkupine/Downloads/DDD_010168412_003_access.jp2", $.extend({miniMap: $("canvas#mini")}, baseOpts))
+					.jp2Viewer("/var/www/balloon.jp2", $.extend({miniMap: $("canvas#mini")}, baseOpts))
 					.jp2ViewerEvents();
 
 				$("canvas#mini")
-					.jp2Viewer("/home/parkupine/Downloads/DDD_010168412_003_access.jp2", $.extend({ initScale: "full-height", wrapImage: true }, baseOpts))
+					.jp2Viewer("/var/www/balloon.jp2", $.extend({ initScale: "full-height", wrapImage: true }, baseOpts))
 					.jp2MinimapEvents({ viewer: $("canvas#big")});
 			});
 		</script>
