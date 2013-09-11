@@ -403,7 +403,7 @@ window.requestAnimFrame = (function(){
 			showImage();
 		}
 
-		function preloadHiddenTiles() {
+		function preloadHiddenTile() {
 			for(var x = 0; x < jp2Header.tw; x++) {
 				for(var y = 0; y < jp2Header.th; y++) {
 					var tileIndex = x + (y * jp2Header.tw);
@@ -414,6 +414,7 @@ window.requestAnimFrame = (function(){
 							t: tileIndex,
 							r: reduction
 						});
+						return;
 					}
 				}
 			}
@@ -425,7 +426,7 @@ window.requestAnimFrame = (function(){
 			if(loadTrigger) { loadImage(); loadTrigger = false; }
 			drawIncompleteTiles();
 			if(incompleteTiles.length == 0) {
-				preloadHiddenTiles();
+				preloadHiddenTile();
 			}
 		}
 
