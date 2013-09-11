@@ -186,6 +186,7 @@ window.requestAnimFrame = (function(){
 		});
 
 		this.on("scaleBy", function(e, s) {
+			xPos *= s; yPos *= s;
 			initScale = scale * s;
 			initialize();
 		});
@@ -197,18 +198,6 @@ window.requestAnimFrame = (function(){
 			setRotation(rot);
 		});
 
-<<<<<<< HEAD
-		this.on("mousewheel", function(e, delta, deltaX, deltaY) {
-			if(delta > 0) {
-				xPos *= 1.1; yPos *= 1.1;
-				initScale = scale * 1.1;
-				initialize();
-			} else if(delta < 0) {
-				xPos *= 0.9; yPos *= 0.9;
-				initScale = scale * 0.9;
-				initialize();
-			}
-=======
 		this.on("refresh", function(e) { 
 			showImage();
 		});
@@ -217,7 +206,6 @@ window.requestAnimFrame = (function(){
 			ctx.beginPath();
 			ctx.rect(realDims.x * scale, realDims.y * scale, realDims.w * scale, realDims.h * scale);
 			ctx.stroke();
->>>>>>> 0e4dd0b51747fadb7e304cd2f0ca782ca726bcdb
 		});
 
 		function setRotation(rot) {
@@ -433,20 +421,11 @@ window.requestAnimFrame = (function(){
 
 		function monitorTiles() {
 			requestAnimFrame(monitorTiles);
-<<<<<<< HEAD
-			if(jp2Header) { 
-				if(loadTrigger) { loadImage(); loadTrigger = false; }
-				drawIncompleteTiles();
-				if(incompleteTiles.length == 0) {
-					preloadHiddenTiles();
-				}
-=======
 			if(!jp2Header) { return; }
 			if(loadTrigger) { loadImage(); loadTrigger = false; }
 			drawIncompleteTiles();
 			if(incompleteTiles.length == 0) {
 				preloadHiddenTiles();
->>>>>>> 0e4dd0b51747fadb7e304cd2f0ca782ca726bcdb
 			}
 		}
 
