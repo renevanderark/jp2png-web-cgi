@@ -5,19 +5,31 @@
 		<script type="text/javascript" src="jquery.jp2-viewer.js"></script>
 		<script type="text/javascript">
 			$(document).ready(function() {
-				$("canvas").jp2Viewer("/var/www/balloon.jp2", {
+				var baseOpts = {
 					workers: [
 						{ address: "http://localhost/cgi-bin/jp2", cores: 1 }
 					],
-					primary: "http://localhost/cgi-bin/jp2",
-					dataType: "json"
-				});
+					primary: "http://localhost/cgi-bin/jp2"
+				};
+
+				$("canvas#big")
+					.jp2Viewer("/var/www/balloon.jp2", $.extend({miniMap: $("canvas#mini")}, baseOpts))
+					.jp2ViewerEvents();
+
+				$("canvas#mini")
+					.jp2Viewer("/var/www/balloon.jp2", $.extend({ initScale: "full-height", wrapImage: true }, baseOpts))
+					.jp2MinimapEvents({ viewer: $("canvas#big")});
 			});
 		</script>
 	</head>
 
 	<body>
-		<canvas width="1800" height="700">
+		<canvas id="big" width="800" height="500" style="float: left; border: 1px solid">
 		</canvas>
+		<canvas id="mini" width="150" height="150" style="float: left; border: 1px solid">
+		</canvas>
+		<button onclick='$("canvas#big").trigger("rotateBy", 90)'>CW</button>
+		<button onclick='$("canvas#big").trigger("rotateBy", -90)'>CCW</button>
+		<br>
 	</body>
 </html>

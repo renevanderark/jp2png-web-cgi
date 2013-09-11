@@ -1,4 +1,3 @@
-// shim layer with setTimeout fallback
 window.requestAnimFrame = (function(){
 	return window.requestAnimationFrame       ||
 		window.webkitRequestAnimationFrame ||
@@ -10,17 +9,134 @@ window.requestAnimFrame = (function(){
 
 
 (function ( $ ) {
+	$.fn.jp2MinimapEvents = function(opts) {
+		if(!opts.viewer) { return; }
+		var viewerScale;
+		var viewerPosition;
+		var _self = this;
+		var dragging = false;
+		var scale = 1.0;
+		var rect;
+
+		var viewerDimensions = {
+			w: opts.viewer.get(0).width,
+			h: opts.viewer.get(0).height
+		};
+
+		this.on("mousedown", function(e) {
+			dragging = true;
+			$(this).css({ cursor: "move" });
+			return false;
+		});
+
+		this.on("mousedown mousemove", function(e) {
+			if(dragging) {
+				var x = (e.pageX - _self.offset().left) + $(window).scrollLeft() - ((rect.w * scale) / 2);
+				var y = (e.pageY - _self.offset().top) + $(window).scrollTop() - ((rect.h * scale) / 2);
+				opts.viewer.trigger("moveTo", { 
+					x: Math.floor(x / scale), 
+					y: Math.floor(y / scale)
+				});
+			}
+			return false;
+		});
+
+		this.on("mouseup mouseout", function(e) {
+			dragging = false;
+			$(this).css({ cursor: "default" });
+			return false;
+		});
+
+		this.on("fullyLoaded", function(e, props) {
+			scale = props.scale;
+			drawRect();
+		});
+
+		this.on("setViewerProperties", function(e, props) {
+			viewerScale = props.scale;
+			viewerPosition = props.pos;
+			viewerRotation = props.rot;
+			drawRect();
+		});
+
+		function drawRect() {
+			_self.trigger("refresh");
+			rect = {
+				x: Math.floor(viewerPosition.x > 0 ? 0 : -(viewerPosition.x) / viewerScale),
+				y: Math.floor(viewerPosition.y > 0 ? 0 : -(viewerPosition.y) / viewerScale),
+				w: Math.ceil(viewerDimensions.w / viewerScale),
+				h: Math.ceil(viewerDimensions.h / viewerScale)
+			};
+
+			switch(viewerRotation) {
+				case 90: 
+				case 270: 
+					var swp1 = rect.w; rect.w = rect.h; rect.h = swp1; 
+					break;
+				default:
+			}
+
+
+			_self.trigger("drawRect", rect);
+		}
+
+		return this;
+	};
+
+	$.fn.jp2ViewerEvents = function(opts) {
+		var curX;
+		var curY;
+		var dragging = false;
+
+		this.on("mousedown", function(e) {
+			dragging = true;
+			curX = e.clientX;
+			curY = e.clientY;
+
+			$(this).css({ cursor: "move" });
+			return false;
+		});
+
+		this.on("mousemove", function(e) {
+			if(dragging) {
+				$(this).trigger("moveBy", { 
+					x: curX - e.clientX, 
+					y: curY - e.clientY
+				});
+				curX = e.clientX;
+				curY = e.clientY;
+			}
+		});
+
+		this.on("mouseup mouseout", function(e) {
+			dragging = false;
+			$(this).css({ cursor: "default" });
+			return false;
+		});
+
+		this.on("mousewheel", function(e, delta, deltaX, deltaY) {
+			if(delta > 0) {
+				$(this).trigger("scaleBy", 1.1);
+			} else if(delta < 0) {
+				$(this).trigger("scaleBy", 0.9);
+			}
+			return false;
+		});
+		return this;
+	};
+
 	$.fn.jp2Viewer = function(filename, opts) {
 		var canvas = this.get(0);
 		var ctx = canvas.getContext('2d');
 		var bufcan = $("<canvas>").get(0);
 		var buffer = bufcan.getContext('2d');
-/*		$("body").append(bufcan);*/
+//		$("body").append($(bufcan).css({"border": "1px solid"}));
 
 		var dataType = opts.dataType || "json";
 		var primary = opts.primary || "http://" + window.location.hostname + "/cgi-bin/jp2";
 		var workers = opts.workers || [{address: primary, cores: 1}]; 
 		var initScale = opts.initScale || "full-width";
+		var _self = this;
 
 		var jp2Header = false;
 		var tiles = {};
@@ -31,47 +147,57 @@ window.requestAnimFrame = (function(){
 		var currentWorker = 0;
 		var xPos = 0;
 		var yPos = 0;
-		var curX;
-		var curY;
 		var oldX;
 		var oldY;
-		var dragging = false;
+
+		var rotation = 0;
+
 		var loadTrigger = false;
 		var showTrigger = false;
 		var incompleteTiles = [];
 
 		bufcan.width = canvas.width;
 		bufcan.height = canvas.height;
-		buffer.fillStyle = opts.backgroundColor || "#aaa";
+		ctx.fillStyle = buffer.fillStyle = opts.backgroundColor || "#aaa";
 
-
-		this.on("mousedown", function(e) {
-			dragging = true;
-			curX = e.clientX;
-			curY = e.clientY;
-			oldX = xPos;
-			oldY = yPos;
-		});
-
-		this.on("mousemove", function(e) {
-			if(dragging) {
-				var movX = curX - e.clientX;
-				var movY = curY - e.clientY;
-				xPos -= movX;
-				yPos -= movY;
-				ensureBounds();
-				showImage();
-				if(oldX != xPos || oldY != yPos) { loadTrigger = true; }
-				curX = e.clientX;
-				curY = e.clientY;
+		this.on("moveBy", function(e, dims) {
+			var movX = dims.x;
+			var movY = dims.y;
+			switch(rotation) {
+				case 90: var swp = movX; movX = movY; movY = -swp; break;
+				case 180: movX = -movX; movY = -movY; break;
+				case 270: var swp = movX; movX = -movY; movY = swp; break;
+				default:
 			}
+
+			xPos -= movX;
+			yPos -= movY;
+			ensureBounds();
+			showImage();
+			loadTrigger = true;
 		});
 
-		this.on("mouseup mouseout", function(e) {
-			if(oldX != xPos || oldY != yPos) { loadTrigger = true; }
-			dragging = false;
+		this.on("moveTo", function(e, realPos) {
+			xPos = -realPos.x * scale;
+			yPos = -realPos.y * scale;
+			ensureBounds();
+			showImage();
+			loadTrigger = true;
 		});
 
+		this.on("scaleBy", function(e, s) {
+			initScale = scale * s;
+			initialize();
+		});
+
+		this.on("rotateBy", function(e, rot) {
+			rot = rotation + rot;
+			if(rot < 0)  { rot = 270; }
+			if(rot > 270) { rot = 0; }
+			setRotation(rot);
+		});
+
+<<<<<<< HEAD
 		this.on("mousewheel", function(e, delta, deltaX, deltaY) {
 			if(delta > 0) {
 				xPos *= 1.1; yPos *= 1.1;
@@ -82,16 +208,44 @@ window.requestAnimFrame = (function(){
 				initScale = scale * 0.9;
 				initialize();
 			}
+=======
+		this.on("refresh", function(e) { 
+			showImage();
 		});
 
+		this.on("drawRect", function(e, realDims) {
+			ctx.beginPath();
+			ctx.rect(realDims.x * scale, realDims.y * scale, realDims.w * scale, realDims.h * scale);
+			ctx.stroke();
+>>>>>>> 0e4dd0b51747fadb7e304cd2f0ca782ca726bcdb
+		});
+
+		function setRotation(rot) {
+			rotation = rot;
+			if(rotation == 90 || rotation == 270) {
+				bufcan.width = canvas.height;
+				bufcan.height = canvas.width;
+			} else {
+				bufcan.width = canvas.width;
+				bufcan.height = canvas.height;
+			}
+			buffer.fillStyle = opts.backgroundColor || "#aaa";
+			ensureBounds();
+			loadImage();
+		}
+
 		function ensureBounds() {
-			if(xPos + (jp2Header.x1 * scale) <= canvas.width) { xPos = canvas.width - (jp2Header.x1 * scale); }
-			if(yPos + (jp2Header.y1 * scale) <= canvas.height) { yPos = canvas.height - (jp2Header.y1 * scale); }
+			if(xPos + (jp2Header.x1 * scale) <= bufcan.width) { xPos = bufcan.width - (jp2Header.x1 * scale); }
+			if(yPos + (jp2Header.y1 * scale) <= bufcan.height) { yPos = bufcan.height - (jp2Header.y1 * scale); }
 			if(xPos > 0) { xPos = 0; }
 			if(yPos > 0) { yPos = 0; }
-			if(jp2Header.x1 * scale <= canvas.width) { 
-				xPos = Math.floor((canvas.width - jp2Header.x1 * scale) / 2);
+			if(jp2Header.x1 * scale <= bufcan.width) { 
+				xPos = Math.floor((bufcan.width - jp2Header.x1 * scale) / 2);
 			}
+			if(jp2Header.y1 * scale <= bufcan.height) { 
+				yPos = Math.floor((bufcan.height - jp2Header.y1 * scale) / 2);
+			}
+
 		}
 
 		function reduce(val, reduction) {
@@ -138,21 +292,31 @@ window.requestAnimFrame = (function(){
 			}
 		}
 
-		function clearSurroundings() {
-			if(jp2Header.x1 * scale <= canvas.width) { 
-				ctx.clearRect(0,0, xPos, canvas.height);
-				ctx.clearRect(canvas.width - xPos - 1, 0, xPos + 1, canvas.height);
+		function clearSurroundings(xCorrection, yCorrection) {
+			var ch = canvas.height;
+			var cw = canvas.width;
+			if(rotation == 90 || rotation == 270) {
+				cw = canvas.height;
+				ch = canvas.width;
+			}
+			if(jp2Header.x1 * scale <= cw) { 
+				ctx.clearRect(xCorrection || 0, yCorrection ||	 0, xPos, ch);
+				ctx.clearRect(cw - xPos - 1 + (xCorrection || 0), (yCorrection || 0), xPos + 1, ch);
 			}
 
-			if(jp2Header.y1 * scale <= canvas.height) { 
-				ctx.clearRect(0, jp2Header.y1 * scale, canvas.width, canvas.height - jp2Header.y1 * scale);
+			if(jp2Header.y1 * scale <= ch) { 
+				ctx.clearRect(xCorrection || 0, yCorrection || 0, cw, yPos);
+				ctx.clearRect((xCorrection || 0), ch - yPos - 1 + (yCorrection || 0), cw, yPos + 1);
 			}
 		}
 
 		function loadImage(_hidden) {
 			var tileS = scale / reduce(1.0, reduction);
-			var tilesX = Math.ceil(canvas.width / (jp2Header.tdx * scale)) + 1;
-			var tilesY = Math.ceil(canvas.height / (jp2Header.tdy * scale)) + 1;
+			var ch = canvas.height;
+			var cw = canvas.width;
+			if(rotation == 90 || rotation == 270) { var swp = cw; cw = ch; ch = swp; }
+			var tilesX = Math.ceil(cw / (jp2Header.tdx * scale)) + 1;
+			var tilesY = Math.ceil(ch / (jp2Header.tdy * scale)) + 1;
 			var tileX = Math.floor(-xPos / (jp2Header.tdx * scale));
 			var tileY = Math.floor(-yPos / (jp2Header.tdy * scale));
 
@@ -208,18 +372,36 @@ window.requestAnimFrame = (function(){
 			setScale(initScale);
 			setReduction();
 			if(__init) { initializeTiles(); }
+			if(opts.wrapImage) { canvas.height = jp2Header.y1 * scale; canvas.width = jp2Header.x1 * scale; }
 			ensureBounds();
 			loadImage();
 		}
 
 		function showImage() {
-			ctx.drawImage(bufcan, 0, 0);
-			clearSurroundings();
+			ctx.save();
+			ctx.translate(canvas.width / 2, canvas.height / 2);
+			ctx.rotate(rotation * (Math.PI / 180));
+			ctx.drawImage(bufcan, -bufcan.width / 2, -bufcan.height / 2);
+			clearSurroundings(-bufcan.width / 2, -bufcan.height / 2);
+			ctx.restore();
+
+			if(opts.miniMap) { updateMinimap(); }
+		}
+
+		function updateMinimap() {
+			opts.miniMap.trigger("setViewerProperties", {
+				scale: scale, 
+				pos: {x: xPos, y: yPos},
+				rot: rotation
+			}); 
 		}
 
 		function drawIncompleteTiles() {
 			var i = incompleteTiles.length;
-			if(i == 0) { return; }
+			if(i == 0) { 
+				_self.trigger("fullyLoaded", { scale: scale });
+				return; 
+			}
 			while(--i > -1) {
 				if(incompleteTiles[i].img.complete) {
 					incompleteTiles[i].dims.x = xPos + Math.floor(incompleteTiles[i].dims.tx * (jp2Header.tdx * scale));
@@ -251,12 +433,20 @@ window.requestAnimFrame = (function(){
 
 		function monitorTiles() {
 			requestAnimFrame(monitorTiles);
+<<<<<<< HEAD
 			if(jp2Header) { 
 				if(loadTrigger) { loadImage(); loadTrigger = false; }
 				drawIncompleteTiles();
 				if(incompleteTiles.length == 0) {
 					preloadHiddenTiles();
 				}
+=======
+			if(!jp2Header) { return; }
+			if(loadTrigger) { loadImage(); loadTrigger = false; }
+			drawIncompleteTiles();
+			if(incompleteTiles.length == 0) {
+				preloadHiddenTiles();
+>>>>>>> 0e4dd0b51747fadb7e304cd2f0ca782ca726bcdb
 			}
 		}
 
@@ -267,5 +457,6 @@ window.requestAnimFrame = (function(){
 			dataType: opts.dataType,
 			success: initialize
 		});
+		return this;
 	};
 }( jQuery ));
