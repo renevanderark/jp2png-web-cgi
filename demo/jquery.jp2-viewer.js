@@ -74,9 +74,11 @@ window.requestAnimFrame = (function(){
 
 		this.on("mousewheel", function(e, delta, deltaX, deltaY) {
 			if(delta > 0) {
+				xPos *= 1.1; yPos *= 1.1;
 				initScale = scale * 1.1;
 				initialize();
 			} else if(delta < 0) {
+				xPos *= 0.9; yPos *= 0.9;
 				initScale = scale * 0.9;
 				initialize();
 			}
@@ -248,12 +250,13 @@ window.requestAnimFrame = (function(){
 		}
 
 		function monitorTiles() {
-			if(!jp2Header) { return; }
 			requestAnimFrame(monitorTiles);
-			if(loadTrigger) { loadImage(); loadTrigger = false; }
-			drawIncompleteTiles();
-			if(incompleteTiles.length == 0) {
-				preloadHiddenTiles();
+			if(jp2Header) { 
+				if(loadTrigger) { loadImage(); loadTrigger = false; }
+				drawIncompleteTiles();
+				if(incompleteTiles.length == 0) {
+					preloadHiddenTiles();
+				}
 			}
 		}
 
