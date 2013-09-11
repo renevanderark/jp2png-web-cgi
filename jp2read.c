@@ -40,6 +40,7 @@ struct params {
 	unsigned y;
 	unsigned w;
 	unsigned h;
+	unsigned num_comps;
 };
 
 struct params *init_params(void);
@@ -58,6 +59,7 @@ struct params *init_params(void) {
 	p->y = 0;
 	p->w = -1;
 	p->h = -1;
+	p->num_comps = 3;
 	p->operation = GET_HEADER;
 	p->filename = NULL;
 	p->jsonp_callback = NULL;
@@ -73,6 +75,7 @@ void parseParam(char k, char *v, struct params *p) {
 		case 'w': p->w = atoi(v); return;
 		case 'h': p->h = atoi(v); return;
 		case 'f': p->filename = url_decode(v); return;
+		case 'n': p->num_comps = atoi(v); return;
 		case 'c': p->jsonp_callback = url_decode(v); return;
 		default: return;
 	}
@@ -178,7 +181,7 @@ int main(void) {
 				puts("Cache-Control: max-age=360000");
 				printf("Last-Modified: %s\n", timestamp);
 				printf("Status: 200 OK\n\n");
-				writePNG(&res, "dynatile", p->x, p->y, p->w, p->h);
+				writePNG(&res, "dynatile", p->x, p->y, p->w, p->h, p->num_comps);
 			} else {
 				puts("Content-type: application/json");
 				printf("Status: 500 Internal Server Error\n\n{\"error\": \"generic\"}");

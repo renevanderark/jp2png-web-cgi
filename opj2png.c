@@ -32,7 +32,7 @@ void setRGB(png_byte *ptr, int r, int g, int b) {
 	ptr[0] = r; ptr[1] = g; ptr[2] = b;
 }
 
-int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, unsigned w, unsigned h) {
+int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, unsigned w, unsigned h, unsigned num_comps) {
 	int code = 0;
 
 	if(xPos >= res->image->comps[0].w) { xPos = 0; }
@@ -90,7 +90,11 @@ int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, uns
 	for (y = yPos ; y < yPos + h ; y++) {
 		for (x = xPos ; x < xPos + w ; x++) {
 			int i = y * res->image->comps[0].w + x;
-			setRGB(&(row[(x-xPos)*3]), res->image->comps[0].data[i], res->image->comps[1].data[i], res->image->comps[2].data[i]);
+			if(num_comps < 3) {
+				setRGB(&(row[(x-xPos)*3]), res->image->comps[0].data[i], res->image->comps[0].data[i], res->image->comps[0].data[i]);
+			} else {
+				setRGB(&(row[(x-xPos)*3]), res->image->comps[0].data[i], res->image->comps[1].data[i], res->image->comps[2].data[i]);
+			}
 		}
 		png_write_row(png_ptr, row);
 	}

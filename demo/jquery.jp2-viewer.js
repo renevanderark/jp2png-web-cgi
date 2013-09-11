@@ -344,7 +344,8 @@ window.requestAnimFrame = (function(){
 						tile.img.src = workers[currentWorker].address + "?" + $.param({
 							f: filename,
 							t: tileIndex,
-							r: reduction
+							r: reduction,
+							n: jp2Header.num_comps
 						});
 						drawTile(tile);
 					}
@@ -412,7 +413,8 @@ window.requestAnimFrame = (function(){
 						tiles["redux-" + reduction][tileIndex].img.src = workers[currentWorker].address + "?" + $.param({
 							f: filename,
 							t: tileIndex,
-							r: reduction
+							r: reduction,
+							n: jp2Header.num_comps
 						});
 						return;
 					}
