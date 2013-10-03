@@ -29,10 +29,11 @@ struct opj_res {
 	FILE *open_file;
 };
 void opj_cleanup(struct opj_res *resources);
+void opj_cleanup_stream(struct opj_res *resources);
 int is_jp2(FILE *fptr);
 void error_callback(const char *msg, void *client_data);
 void warning_callback(const char *msg, void *client_data);
 void info_callback(const char *msg, void *client_data);
 struct opj_res opj_init(const char *fname, opj_dparameters_t *parameters);
-
+struct opj_res opj_init_from_stream(opj_stream_t* l_stream, opj_dparameters_t *parameters);
 
