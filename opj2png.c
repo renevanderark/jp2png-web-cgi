@@ -28,7 +28,7 @@
 #include "opj2png.h"
 
 
-void setRGB(png_byte *ptr, int r, int g, int b) {
+static void setRGB(png_byte *ptr, int r, int g, int b) {
 	ptr[0] = r; ptr[1] = g; ptr[2] = b;
 }
 
@@ -46,20 +46,17 @@ int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, uns
 
 	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if (png_ptr == NULL) {
-		error_callback("Could not allocate write struct\n", NULL);
 		code = 1;
 		goto finalise;
 	}
 
 	info_ptr = png_create_info_struct(png_ptr);
 	if (info_ptr == NULL) {
-		error_callback("Could not allocate info struct\n", NULL);
 		code = 1;
 		goto finalise;
 	}
 
 	if (setjmp(png_jmpbuf(png_ptr))) {
-		error_callback("Error during png creation\n", NULL);
 		code = 1;
 		goto finalise;
 	}

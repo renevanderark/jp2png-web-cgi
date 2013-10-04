@@ -68,12 +68,13 @@ OPJ_SIZE_T opj_read_from_url (void * p_buffer, OPJ_SIZE_T p_nb_bytes, struct opj
 	return l_nb_read ? l_nb_read : (OPJ_SIZE_T)-1;
 }
 
-OPJ_UINT64 get_url_data_length(char * address) {
+OPJ_UINT64 get_url_data_length(const char * address) {
 	char *buf;
 	size_t size;
 	char *line = NULL;
 	size_t len = 0;
 	ssize_t read;
+	long http_code = 0;
 	OPJ_UINT64 data_length = 0;
 
 	FILE *fp = open_memstream(&buf, &size);
@@ -83,9 +84,13 @@ OPJ_UINT64 get_url_data_length(char * address) {
 	curl_easy_setopt(ch, CURLOPT_NOBODY, 1);
 	curl_easy_setopt(ch, CURLOPT_WRITEHEADER, (void*) fp);
 	curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
-	curl_easy_perform(ch);
+	CURLcode curl_code = curl_easy_perform(ch);
+	curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &http_code);
 	curl_easy_cleanup(ch);
 	curl_global_cleanup();
+
+	if(curl_code != CURLE_OK && curl_code != CURLE_ABORTED_BY_CALLBACK) { return 0; }
+	if(http_code != 200 ) { return 0; }
 
 	while ((read = getline(&line, &len, fp)) != -1) {
 		char *hk = strtok(line, ":");

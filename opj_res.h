@@ -18,8 +18,6 @@
 
 #define READ_FAILURE 0
 #define READ_SUCCESS 1
-#define JP2_RFC3745_MAGIC "\x00\x00\x00\x0c\x6a\x50\x20\x20\x0d\x0a\x87\x0a"
-#define JP2_MAGIC "\x0d\x0a\x87\x0a"
 
 struct opj_res {
 	int status;
@@ -27,13 +25,10 @@ struct opj_res {
 	opj_codec_t *l_codec;
 	opj_image_t *image;
 	FILE *open_file;
+	struct opj_url_stream_data *p_url;
 };
+
 void opj_cleanup(struct opj_res *resources);
-void opj_cleanup_stream(struct opj_res *resources);
-int is_jp2(FILE *fptr);
-void error_callback(const char *msg, void *client_data);
-void warning_callback(const char *msg, void *client_data);
-void info_callback(const char *msg, void *client_data);
 struct opj_res opj_init(const char *fname, opj_dparameters_t *parameters);
-struct opj_res opj_init_from_stream(opj_stream_t* l_stream, opj_dparameters_t *parameters);
+struct opj_res opj_init_from_url(const char *url, opj_dparameters_t *parameters);
 

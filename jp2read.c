@@ -34,6 +34,7 @@ struct params {
 	int tile_index;
 	int reduction_factor;
 	char *filename;
+	char *url;
 	char *jsonp_callback;
 	operation_t operation;
 	unsigned x;
@@ -43,15 +44,7 @@ struct params {
 	unsigned num_comps;
 };
 
-struct params *init_params(void);
-void parseParam(char k, char *v, struct params *p);
-struct params *parse(char *qstr);
-struct opj_res getTile(struct params *p);
-int getJp2Specs (const char *filename, char *data);
-void getTime(char *tm);
-
-
-struct params *init_params(void) {
+static struct params *init_params(void) {
 	struct params *p = malloc(sizeof(struct params));
 	p->tile_index = 0;
 	p->reduction_factor = 0;
@@ -62,11 +55,12 @@ struct params *init_params(void) {
 	p->num_comps = 3;
 	p->operation = GET_HEADER;
 	p->filename = NULL;
+	p->url = NULL;
 	p->jsonp_callback = NULL;
 	return p;
 }
 
-void parseParam(char k, char *v, struct params *p) {
+static void parseParam(char k, char *v, struct params *p) {
 	switch(k) {
 		case 't': p->tile_index = atoi(v); p->operation = READ_TILE; return;
 		case 'r': p->reduction_factor = atoi(v); return;
@@ -75,13 +69,14 @@ void parseParam(char k, char *v, struct params *p) {
 		case 'w': p->w = atoi(v); return;
 		case 'h': p->h = atoi(v); return;
 		case 'f': p->filename = url_decode(v); return;
+		case 'u': p->url = url_decode(v); return;
 		case 'n': p->num_comps = atoi(v); return;
 		case 'c': p->jsonp_callback = url_decode(v); return;
 		default: return;
 	}
 }
 
-struct params *parse(char *qstr) {
+static struct params *parse(char *qstr) {
 	struct params *p = init_params();
 	int i = 0;
 	int j;
@@ -100,61 +95,61 @@ struct params *parse(char *qstr) {
 	return p;
 }
 
-struct opj_res getTile(struct params *p) {
-	FILE *fptr = fopen(p->filename, "rb");
+static struct opj_res getTile(struct params *p) {
 	struct opj_res resources;
-	resources.status = READ_FAILURE;
 
-	if(fptr != NULL && is_jp2(fptr)) {
-		opj_dparameters_t parameters;
-		opj_set_default_decoder_parameters(&parameters);
-		parameters.cp_reduce = p->reduction_factor;
-		parameters.cp_layer = 100;
-		struct opj_res resources = opj_init(p->filename, &parameters);
+	opj_dparameters_t parameters;
+	opj_set_default_decoder_parameters(&parameters);
+	parameters.cp_reduce = p->reduction_factor;
+	parameters.cp_layer = 100;
 
-		if(resources.status == 0 && opj_get_decoded_tile(resources.l_codec, resources.l_stream, resources.image, p->tile_index)) {
-			return resources;
-		}
+	if(p->filename) { resources = opj_init(p->filename, &parameters); }
+	else if(p->url) { resources = opj_init_from_url(p->url, &parameters); }
+
+	if(!opj_get_decoded_tile(resources.l_codec, resources.l_stream, resources.image, p->tile_index)) {
+		resources.status = 1;
 	}
 
 	return resources;
 }
 
+static int getJp2Specs (struct params *p, char *data) {
+	struct opj_res resources;
+	int read_status = READ_FAILURE;
 
-int getJp2Specs (const char *filename, char *data) {
-	FILE *fptr = fopen(filename, "rb");
-	if(fptr != NULL && is_jp2(fptr)) {
-		opj_dparameters_t parameters;
-		opj_set_default_decoder_parameters(&parameters);
-		struct opj_res resources = opj_init(filename, &parameters);
-
+	opj_dparameters_t parameters;
+	opj_set_default_decoder_parameters(&parameters);
+	if(p->filename) { resources = opj_init(p->filename, &parameters); }
+	else if(p->url) { resources = opj_init_from_url(p->url, &parameters); }
+	else { sprintf(data, "{\"error\": \"No resource specified\"}"); return READ_FAILURE; }
+	if(resources.status == 0) {
 		opj_codestream_info_v2_t* info = opj_get_cstr_info(resources.l_codec);
-		if(resources.status == 0) {
-			sprintf(data, "{\"x1\":%d,\"y1\":%d, \"tw\": %d, \"th\": %d, \"tdx\": %d, \"tdy\": %d, \"num_res\": %d, \"num_comps\": %d}", 
-				resources.image->x1, 
-				resources.image->y1,
-				info->tw,
-				info->th,
-				info->tdx,
-				info->tdy,
-				info->m_default_tile_info.tccp_info[0].numresolutions,
-				resources.image->numcomps
-			);
-		}
+		sprintf(data, "{\"x1\":%d,\"y1\":%d, \"tw\": %d, \"th\": %d, \"tdx\": %d, \"tdy\": %d, \"num_res\": %d, \"num_comps\": %d}", 
+			resources.image->x1, 
+			resources.image->y1,
+			info->tw,
+			info->th,
+			info->tdx,
+			info->tdy,
+			info->m_default_tile_info.tccp_info[0].numresolutions,
+			resources.image->numcomps
+		);
 		opj_destroy_cstr_info(&info);
-		opj_cleanup(&resources);
-		return READ_SUCCESS;
+		read_status = READ_SUCCESS;
 	} else {
 		char msg[255];
-		sprintf(msg, "Cannot read file '%s'", filename);
+		if(p->url) { sprintf(msg, "Cannot read resource '%s'", p->url); }
+		else if(p->filename) { sprintf(msg, "Cannot read resource '%s'", p->filename); }
 		sprintf(data, "{\"error\": \"%s\"}", msg);
-		error_callback(msg, NULL);
-		error_callback(filename, NULL);
-		return READ_FAILURE;
+		read_status = READ_FAILURE;
 	}
+
+	opj_cleanup(&resources);
+	return read_status;
 }
 
-void getTime(char *tm) {
+
+static void getTime(char *tm) {
 	time_t rawtime;
 	struct tm * timeinfo;
 
@@ -190,7 +185,7 @@ int main(void) {
 			break;
 		case GET_HEADER:
 			puts("Content-type: application/json");
-			if( (status = getJp2Specs(p->filename, data)) ) {
+			if( (status = getJp2Specs(p, data)) ) {
 				puts("Pragma: public");
 				puts("Cache-Control: max-age=360000");
 				printf("Last-Modified: %s\n", timestamp);

@@ -18,92 +18,102 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <openjpeg.h>
+#include "opj_url_stream.h"
 #include "opj_res.h"
 
-void error_callback(const char *msg, void *client_data) {(void)client_data; fprintf(stderr, "[ERROR] %s\r\n", msg);}
-void warning_callback(const char *msg, void *client_data) { (void)client_data; fprintf(stderr, "[WARNING] %s\r\n", msg);}
-void info_callback(const char *msg, void *client_data) {(void)client_data; fprintf(stderr, "[INFO] %s\r\n", msg);}
+static void error_callback(const char *msg, void *client_data) {(void)client_data; fprintf(stderr, "[ERROR] %s\n", msg);}
+static void warning_callback(const char *msg, void *client_data) { (void)client_data; fprintf(stderr, "[WARNING] %s\n", msg);}
+static void info_callback(const char *msg, void *client_data) {(void)client_data; fprintf(stderr, "[INFO] %s\n", msg);}
 
-struct opj_res opj_init_from_stream(opj_stream_t* l_stream, opj_dparameters_t *parameters) {
+static struct opj_res opj_init_res(void) {
 	struct opj_res resources;
-	resources.l_stream = l_stream;
-	resources.status = 0;
+
+	resources.status = -1;
+	resources.l_stream = NULL;
+	resources.l_codec = NULL;
 	resources.image = NULL;
-	resources.l_codec = opj_create_decompress(OPJ_CODEC_JP2);
-
-	if(!opj_setup_decoder(resources.l_codec, parameters)) {
-		opj_stream_destroy(resources.l_stream);
-		opj_destroy_codec(resources.l_codec);
-		resources.status = 2;
-	}
-
-	if(!opj_read_header(resources.l_stream, resources.l_codec, &(resources.image))) {
-		opj_stream_destroy(resources.l_stream);
-		opj_destroy_codec(resources.l_codec);
-		opj_image_destroy(resources.image);
-		resources.status = 3;
-	}
-
-	opj_set_info_handler(resources.l_codec, info_callback,00);
-	opj_set_warning_handler(resources.l_codec, warning_callback,00);
-	opj_set_error_handler(resources.l_codec, error_callback,00);
+	resources.open_file = NULL;
+	resources.p_url = NULL;
 
 	return resources;
+}
+
+static int opj_init_from_stream(opj_dparameters_t *parameters, struct opj_res *resources) {
+
+	resources->image = NULL;
+	resources->l_codec = opj_create_decompress(OPJ_CODEC_JP2);
+
+	if(!opj_setup_decoder(resources->l_codec, parameters)) {
+		opj_stream_destroy(resources->l_stream);
+		opj_destroy_codec(resources->l_codec);
+		return 2;
+	}
+
+	if(!opj_read_header(resources->l_stream, resources->l_codec, &(resources->image))) {
+		opj_stream_destroy(resources->l_stream);
+		opj_destroy_codec(resources->l_codec);
+		opj_image_destroy(resources->image);
+		return 3;
+	}
+
+	opj_set_info_handler(resources->l_codec, info_callback,00);
+	opj_set_warning_handler(resources->l_codec, warning_callback,00);
+	opj_set_error_handler(resources->l_codec, error_callback,00);
+	return 0;
 }
 
 struct opj_res opj_init(const char *fname, opj_dparameters_t *parameters) {
 
-	struct opj_res resources;
-	resources.status = 0;
-	resources.image = NULL;
+	struct opj_res resources = opj_init_res();
 	FILE *fptr = fopen(fname, "rb");
+	if(fptr == NULL) {
+		resources.status = 1;
+		return resources;
+	}
+
 	resources.open_file = fptr;
 	resources.l_stream = opj_stream_create_default_file_stream(fptr,1);
-	resources.l_codec = opj_create_decompress(OPJ_CODEC_JP2);
-	if(!resources.l_stream) { resources.status = 1; }
-	if(!opj_setup_decoder(resources.l_codec, parameters)) {
-		opj_stream_destroy(resources.l_stream);
-		opj_destroy_codec(resources.l_codec);
-		resources.status = 2;
+	if(!resources.l_stream) { 
+		resources.status = 1; 
+		return resources;
+	}
+	resources.status = opj_init_from_stream(parameters, &resources);
+	return resources;
+}
+
+struct opj_res opj_init_from_url(const char *url, opj_dparameters_t *parameters) {
+	struct opj_res resources = opj_init_res();
+	resources.l_stream = opj_stream_create(OPJ_J2K_STREAM_CHUNK_SIZE, 1);
+	if(!resources.l_stream) { 
+		resources.status = 1;
+		return resources; 
+	}
+	resources.p_url = malloc(sizeof(struct opj_url_stream_data));
+	resources.p_url->url = url;
+	resources.p_url->position = 0;
+	resources.p_url->size = get_url_data_length(resources.p_url->url);
+	if(resources.p_url->size == 0) {
+		resources.status = 1;
+		return resources;
 	}
 
-	if(!opj_read_header(resources.l_stream, resources.l_codec, &(resources.image))) {
-		opj_stream_destroy(resources.l_stream);
-		opj_destroy_codec(resources.l_codec);
-		opj_image_destroy(resources.image);
-		resources.status = 3;
-	}
-
-/*	opj_set_info_handler(resources.l_codec, info_callback,00);
-	opj_set_warning_handler(resources.l_codec, warning_callback,00);*/
-	opj_set_error_handler(resources.l_codec, error_callback,00);
+	opj_stream_set_user_data(resources.l_stream, resources.p_url);
+	opj_stream_set_user_data_length(resources.l_stream, resources.p_url->size);
+	opj_stream_set_read_function(resources.l_stream, (opj_stream_read_fn) opj_read_from_url);
+	opj_stream_set_skip_function(resources.l_stream, (opj_stream_skip_fn) opj_skip_from_url);
+	opj_stream_set_seek_function(resources.l_stream, (opj_stream_seek_fn) opj_seek_from_url);
+	resources.status = opj_init_from_stream(parameters, &resources);
 	return resources;
 }
 
 void opj_cleanup(struct opj_res *resources) {
-
 	if(resources->l_stream) { opj_stream_destroy(resources->l_stream); }
 	if(resources->l_codec) { opj_destroy_codec(resources->l_codec); }
 	if(resources->image) { opj_image_destroy(resources->image); }
+	if(resources->p_url) { free(resources->p_url); }
 	if(resources->open_file) { fclose(resources->open_file); }
 }
 
-void opj_cleanup_stream(struct opj_res *resources) {
-	if(resources->l_codec) { opj_destroy_codec(resources->l_codec); }
-	if(resources->image) { opj_image_destroy(resources->image); }
-	if(resources->l_stream) { opj_stream_destroy(resources->l_stream); }
-}
-
-int is_jp2(FILE *fptr) {
-	unsigned char buf[12];
-/*	unsigned int l_nb_read;*/
-
-	/*l_nb_read = */fread(buf, 1, 12, fptr);
-	fseek(fptr, 0, SEEK_SET);
-
-	int retval = memcmp(buf, JP2_RFC3745_MAGIC, 12) == 0 || memcmp(buf, JP2_MAGIC, 4) == 0;
-	fclose(fptr);
-	return retval;
-}

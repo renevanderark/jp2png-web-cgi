@@ -20,10 +20,10 @@
 struct opj_url_stream_data {
 	OPJ_UINT64 position;
 	OPJ_UINT64 size;
-	char *url;
+	const char *url;
 };
 
-OPJ_UINT64 get_url_data_length(char * address);
+OPJ_UINT64 get_url_data_length(const char * address);
 OPJ_SIZE_T opj_read_from_url (void * p_buffer, OPJ_SIZE_T p_nb_bytes, struct opj_url_stream_data * p_url);
 OPJ_BOOL opj_seek_from_url (OPJ_OFF_T p_nb_bytes, struct opj_url_stream_data * p_url);
 OPJ_OFF_T opj_skip_from_url (OPJ_OFF_T p_nb_bytes, struct opj_url_stream_data * p_url);

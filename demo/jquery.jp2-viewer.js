@@ -125,18 +125,24 @@ window.requestAnimFrame = (function(){
 		return this;
 	};
 
-	$.fn.jp2Viewer = function(filename, opts) {
+	$.fn.jp2Viewer = function(options) {
+		var opts = options || opts;
 		var canvas = this.get(0);
 		var ctx = canvas.getContext('2d');
 		var bufcan = $("<canvas>").get(0);
 		var buffer = bufcan.getContext('2d');
-//		$("body").append($(bufcan).css({"border": "1px solid"}));
-
+		var filename = opts.filename || false;
+		var url = opts.url || false;
 		var dataType = opts.dataType || "json";
 		var primary = opts.primary || "http://" + window.location.hostname + "/cgi-bin/jp2";
 		var workers = opts.workers || [{address: primary, cores: 1}]; 
 		var initScale = opts.initScale || "full-width";
 		var _self = this;
+		var _baseParams = {};
+		if(filename) { _baseParams = {f: filename}; }
+		else if(url) { _baseParams = {u: url }; }
+		else { return; }
+
 
 		var jp2Header = false;
 		var tiles = {};
@@ -341,12 +347,11 @@ window.requestAnimFrame = (function(){
 							}
 						}
 						tiles["redux-" + reduction][tileIndex] = tile;
-						tile.img.src = workers[currentWorker].address + "?" + $.param({
-							f: filename,
+						tile.img.src = workers[currentWorker].address + "?" + $.param($.extend({
 							t: tileIndex,
 							r: reduction,
 							n: jp2Header.num_comps
-						});
+						}, _baseParams));
 						drawTile(tile);
 					}
 
@@ -410,12 +415,12 @@ window.requestAnimFrame = (function(){
 					var tileIndex = x + (y * jp2Header.tw);
 					if(!tiles["redux-" + reduction][tileIndex]) {
 						tiles["redux-" + reduction][tileIndex] = { img: new Image() };
-						tiles["redux-" + reduction][tileIndex].img.src = workers[currentWorker].address + "?" + $.param({
-							f: filename,
+						tiles["redux-" + reduction][tileIndex].img.src = workers[currentWorker].address + "?" + $.param($.extend({
 							t: tileIndex,
 							r: reduction,
 							n: jp2Header.num_comps
-						});
+						}, _baseParams));
+
 						return;
 					}
 				}
@@ -435,7 +440,7 @@ window.requestAnimFrame = (function(){
 		monitorTiles();
 
 		$.ajax(primary, {
-			data: { f: filename },
+			data: _baseParams,
 			dataType: opts.dataType,
 			success: initialize
 		});
