@@ -22,9 +22,9 @@
 #include <string.h>
 #include <time.h>
 #include <png.h>
-#include "opj_res.h"
-#include "opj2png.h"
-#include "urldecode.h"
+#include "lib/opj_res.h"
+#include "lib/opj2png.h"
+#include "lib/urldecode.h"
 
 typedef enum {GET_HEADER, READ_TILE} operation_t;
 
