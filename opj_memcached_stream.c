@@ -9,6 +9,7 @@
 /**  1024 *1024-96 **/
 #define MAX_CHUNK_SIZE 1024
 
+
 struct memcached_chunk {
 	char *basekey;
 	unsigned idx;
@@ -87,9 +88,32 @@ static size_t write_to_cache(unsigned char *ptr, size_t size, size_t nmb, struct
 	return size*nmb;
 }
 
+static int check_headers(char *url) {
+	CURL *ch;
+	long http_code = 0;
+
+	ch = curl_easy_init();
+	curl_easy_setopt(ch, CURLOPT_URL, url);
+	curl_easy_setopt(ch, CURLOPT_FOLLOWLOCATION, 1);
+	curl_easy_setopt(ch, CURLOPT_NOBODY, 1);
+	curl_easy_perform(ch);
+
+	CURLcode curl_code = curl_easy_perform(ch);
+	curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &http_code);
+	curl_easy_cleanup(ch);
+	curl_global_cleanup();
+
+	fprintf(stderr, "HTTP status code: %zu\n", http_code);
+
+	if(curl_code != CURLE_OK && curl_code != CURLE_ABORTED_BY_CALLBACK) { return 0; }
+	if(http_code != 200 ) { return 0; }
+	return 1;
+}
+
 int download_to_cache(char *url, memcached_server_st *servers) {
 	struct memcached_chunk chunk;
-	if(!init_chunk(url, servers, &chunk)) { return 1; }
+	if(!check_headers(url)) { return 0; }
+	if(!init_chunk(url, servers, &chunk)) { return 0; }
 
 	CURL *ch;
 
@@ -107,7 +131,7 @@ int download_to_cache(char *url, memcached_server_st *servers) {
 	write_total_size(&chunk);
 	fprintf(stderr, "total size: %zu\n", chunk.total_size);
 	memcached_free(chunk.memc);
-
+	return 1;
 }
 
 int main(int argc, char **argv) {
@@ -120,7 +144,7 @@ int main(int argc, char **argv) {
 	if(!init_chunk(argv[1], servers, &rd_chunk)) { return 1; }
 
 	if(!read_total_size(&rd_chunk)) { 
-		download_to_cache(argv[1], servers);
+		if(!download_to_cache(argv[1], servers)) { return 1; }
 		if(!read_total_size(&rd_chunk)) { return 1; }
 	}
 	fprintf(stderr, "total size read from db: %zu\n", rd_chunk.total_size);
