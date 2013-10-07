@@ -5,32 +5,16 @@
 #include <unistd.h>
 #include <libmemcached/memcached.h>
 #include <openjpeg.h>
-
-/**  1024 *1024-96 **/
-#define MAX_CHUNK_SIZE 1024
+#include "opj_memcached_stream.h"
 
 
-struct memcached_chunk {
-	char *basekey;
-	unsigned idx;
-	size_t size;
-	OPJ_UINT64 total_size;
-	char data[MAX_CHUNK_SIZE];
-	memcached_st *memc;
-};
-
-
-static int init_chunk(char *basekey, memcached_server_st *servers, struct memcached_chunk *chunk) {
-	memcached_return rc;
-
+static int init_chunk(const char *basekey, memcached_st *memc, struct memcached_chunk *chunk) {
 	chunk->idx = 0;
 	chunk->basekey = basekey;
 	chunk->total_size = 0;
 	chunk->size = 0;
-	chunk->memc = memcached_create(NULL);
-
-	rc = memcached_server_push(chunk->memc, servers);
-	if (rc != MEMCACHED_SUCCESS) { return 0; }
+	chunk->memc = memc;
+	chunk->read_position = 0;
 
 	return 1;
 }
@@ -88,7 +72,7 @@ static size_t write_to_cache(unsigned char *ptr, size_t size, size_t nmb, struct
 	return size*nmb;
 }
 
-static int check_headers(char *url) {
+static int check_headers(const char *url) {
 	CURL *ch;
 	long http_code = 0;
 
@@ -110,10 +94,13 @@ static int check_headers(char *url) {
 	return 1;
 }
 
-int download_to_cache(char *url, memcached_server_st *servers) {
+static OPJ_UINT64 download_to_cache(const char *url, memcached_st *memc) {
 	struct memcached_chunk chunk;
+	if(!init_chunk(url, memc, &chunk)) { return 0; }
+
+	if(read_total_size(&chunk)) { return chunk.total_size; }
+
 	if(!check_headers(url)) { return 0; }
-	if(!init_chunk(url, servers, &chunk)) { return 0; }
 
 	CURL *ch;
 
@@ -130,35 +117,85 @@ int download_to_cache(char *url, memcached_server_st *servers) {
 
 	write_total_size(&chunk);
 	fprintf(stderr, "total size: %zu\n", chunk.total_size);
-	memcached_free(chunk.memc);
-	return 1;
+	return chunk.total_size;
 }
 
-int main(int argc, char **argv) {
-	memcached_server_st *servers = NULL;
-	memcached_return rc;
-	servers = memcached_server_list_append(servers, "localhost", 11211, &rc);
 
-	unsigned i;
+static OPJ_OFF_T opj_skip_from_cache (OPJ_OFF_T p_nb_bytes, struct memcached_chunk *chunk) {
+	chunk->read_position += p_nb_bytes;
+	if(chunk->read_position > chunk->total_size) {
+		return -1;
+	}
+	return p_nb_bytes;
+}
+
+static OPJ_BOOL opj_seek_from_cache (OPJ_OFF_T p_nb_bytes, struct memcached_chunk *chunk) {
+	chunk->read_position = p_nb_bytes;
+	if(chunk->read_position > chunk->total_size) {
+		return OPJ_FALSE;
+	}
+	return OPJ_TRUE;
+}
+
+static OPJ_SIZE_T opj_read_from_cache(char * p_buffer, OPJ_SIZE_T p_nb_bytes, struct memcached_chunk *chunk) {
+	OPJ_SIZE_T l_nb_read = 0;
+	OPJ_UINT64 chunk_position;
+	while(l_nb_read < p_nb_bytes && chunk->read_position < chunk->total_size) {
+		unsigned i;
+		chunk->idx = chunk->read_position / MAX_CHUNK_SIZE;
+		chunk_position = chunk->read_position - (chunk->idx * MAX_CHUNK_SIZE);
+
+		read_chunk(chunk);
+		for(i = chunk_position; i < chunk->size; i++, l_nb_read++, chunk->read_position++) {
+			p_buffer[l_nb_read] = chunk->data[i];
+		}
+	}
+
+	return l_nb_read ? l_nb_read : (OPJ_SIZE_T)-1;
+}
+
+
+opj_stream_t *opj_init_memcached_stream_from_url(const char *url, memcached_st *memc) {
+	OPJ_UINT64 filesize = download_to_cache(url, memc);
+	if(filesize == 0) { 
+		fprintf(stderr, "Failed to download file from url: %s", url);
+		return NULL; 
+	}
+
+	opj_stream_t *l_stream = opj_stream_create(MAX_CHUNK_SIZE, 1);
+	if(!l_stream) { 
+		fprintf(stderr, "Failed to initialize stream");
+		return NULL; 
+	}
+
 	struct memcached_chunk rd_chunk;
-	if(!init_chunk(argv[1], servers, &rd_chunk)) { return 1; }
-
-	if(!read_total_size(&rd_chunk)) { 
-		if(!download_to_cache(argv[1], servers)) { return 1; }
-		if(!read_total_size(&rd_chunk)) { return 1; }
+	if(!init_chunk(url, memc, &rd_chunk)) {
+		fprintf(stderr, "Failed to initialize stream");
+		return NULL;
 	}
-	fprintf(stderr, "total size read from db: %zu\n", rd_chunk.total_size);
 
-
-	FILE *fp = fopen("output.jp2", "wa");
-	for(i = 0; i <= rd_chunk.total_size / MAX_CHUNK_SIZE; i++) {
-		rd_chunk.idx = i;
-		read_chunk(&rd_chunk);
-		fwrite(rd_chunk.data, rd_chunk.size, 1, fp);
+	read_total_size(&rd_chunk);
+	if(rd_chunk.total_size == 0) {
+		fprintf(stderr, "Failed to initialize stream");
+		return NULL;
 	}
-	memcached_free(rd_chunk.memc);
-	memcached_server_free(servers);
-	free(servers);
-	fclose(fp);
-	return 0;
+
+	opj_stream_set_user_data(l_stream, &rd_chunk);
+	opj_stream_set_user_data_length(l_stream, filesize);
+	opj_stream_set_read_function(l_stream, (opj_stream_read_fn) opj_read_from_cache);
+	opj_stream_set_skip_function(l_stream, (opj_stream_skip_fn) opj_skip_from_cache);
+	opj_stream_set_seek_function(l_stream, (opj_stream_seek_fn) opj_seek_from_cache);
+
+	read_total_size(&rd_chunk);
+	FILE *f = fopen("output.jp2", "wa");
+	while(rd_chunk.read_position < filesize) { 
+		char buf[MAX_CHUNK_SIZE];
+		int i;
+		OPJ_UINT64 read = opj_read_from_cache((char*)&buf, sizeof(buf) - 1, &rd_chunk);
+		fwrite(buf, MAX_CHUNK_SIZE,1,f);
+	}
+	fclose(f);
+	return l_stream;
 }
+
+
