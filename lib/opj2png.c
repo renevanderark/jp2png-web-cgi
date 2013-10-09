@@ -24,6 +24,7 @@
 #include <png.h>
 #include <string.h>
 #include <openjpeg.h>
+#include <libmemcached/memcached.h>
 #include "opj_res.h"
 #include "opj2png.h"
 

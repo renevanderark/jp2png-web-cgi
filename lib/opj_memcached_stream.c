@@ -24,7 +24,7 @@ static void write_total_size(struct memcached_chunk *chunk) {
 	char strval[50];
 	sprintf(strval, "%zu", chunk->total_size);
 	rc = memcached_set(chunk->memc, chunk->basekey, strlen(chunk->basekey), strval, sizeof(OPJ_UINT64), (time_t) 0, (uint32_t) 0);
-	if (rc == MEMCACHED_SUCCESS) { fprintf(stderr,"Key stored successfully: %s\n", chunk->basekey); }
+	if (rc == MEMCACHED_SUCCESS) { /*fprintf(stderr,"Key stored successfully: %s\n", key);*/ }
 	else { fprintf(stderr,"Couldn't store key: %s\n",memcached_strerror(chunk->memc, rc)); }
 }
 
@@ -33,7 +33,7 @@ static void write_chunk(struct memcached_chunk *chunk) {
 	sprintf(key, "%s-%010u", chunk->basekey, chunk->idx);
 	memcached_return rc;
 	rc = memcached_set(chunk->memc, key, strlen(key), chunk->data, chunk->size, (time_t)0, (uint32_t)0);
-	if (rc == MEMCACHED_SUCCESS) { fprintf(stderr,"Key stored successfully: %s\n", key); }
+	if (rc == MEMCACHED_SUCCESS) { /*fprintf(stderr,"Key stored successfully: %s\n", key);*/ }
 	else { fprintf(stderr,"Couldn't store key: %s\n",memcached_strerror(chunk->memc, rc)); }
 	chunk->total_size += chunk->size;
 	chunk->idx++;
@@ -45,7 +45,7 @@ static int read_total_size(struct memcached_chunk *chunk) {
 	size_t value_length;
 	uint32_t flags;
 	char *total_size = memcached_get(chunk->memc, chunk->basekey, strlen(chunk->basekey), &value_length, &flags, &rc);
-	if (rc == MEMCACHED_SUCCESS) { fprintf(stderr,"Key read successfully: %s\n", chunk->basekey); }
+	if (rc == MEMCACHED_SUCCESS) { /*fprintf(stderr,"Key read successfully: %s\n", chunk->basekey);*/ }
 	else { fprintf(stderr,"Couldn't read key: %s\n",memcached_strerror(chunk->memc, rc)); return 0; }
 	chunk->total_size = strtoumax(total_size, NULL, 10);
 	return 1;
@@ -116,7 +116,7 @@ static OPJ_UINT64 download_to_cache(const char *url, memcached_st *memc) {
 	write_chunk(&chunk);
 
 	write_total_size(&chunk);
-	fprintf(stderr, "total size: %zu\n", chunk.total_size);
+/*	fprintf(stderr, "total size: %zu\n", chunk.total_size);*/
 	return chunk.total_size;
 }
 
@@ -140,6 +140,7 @@ static OPJ_BOOL opj_seek_from_cache (OPJ_OFF_T p_nb_bytes, struct memcached_chun
 static OPJ_SIZE_T opj_read_from_cache(char * p_buffer, OPJ_SIZE_T p_nb_bytes, struct memcached_chunk *chunk) {
 	OPJ_SIZE_T l_nb_read = 0;
 	OPJ_UINT64 chunk_position;
+
 	while(l_nb_read < p_nb_bytes && chunk->read_position < chunk->total_size) {
 		unsigned i;
 		chunk->idx = chunk->read_position / MAX_CHUNK_SIZE;
@@ -155,46 +156,36 @@ static OPJ_SIZE_T opj_read_from_cache(char * p_buffer, OPJ_SIZE_T p_nb_bytes, st
 }
 
 
-opj_stream_t *opj_init_memcached_stream_from_url(const char *url, memcached_st *memc) {
+opj_stream_t *opj_init_memcached_stream_from_url(const char *url, memcached_st *memc, struct memcached_chunk *rd_chunk) {
 	OPJ_UINT64 filesize = download_to_cache(url, memc);
 	if(filesize == 0) { 
 		fprintf(stderr, "Failed to download file from url: %s", url);
 		return NULL; 
 	}
 
-	opj_stream_t *l_stream = opj_stream_create(MAX_CHUNK_SIZE, 1);
+	opj_stream_t *l_stream = opj_stream_create(OPJ_J2K_STREAM_CHUNK_SIZE, 1);
 	if(!l_stream) { 
 		fprintf(stderr, "Failed to initialize stream");
 		return NULL; 
 	}
 
-	struct memcached_chunk rd_chunk;
-	if(!init_chunk(url, memc, &rd_chunk)) {
+	if(!init_chunk(url, memc, rd_chunk)) {
 		fprintf(stderr, "Failed to initialize stream");
 		return NULL;
 	}
 
-	read_total_size(&rd_chunk);
-	if(rd_chunk.total_size == 0) {
+	read_total_size(rd_chunk);
+	if(rd_chunk->total_size == 0) {
 		fprintf(stderr, "Failed to initialize stream");
 		return NULL;
 	}
 
-	opj_stream_set_user_data(l_stream, &rd_chunk);
+	opj_stream_set_user_data(l_stream, rd_chunk);
 	opj_stream_set_user_data_length(l_stream, filesize);
 	opj_stream_set_read_function(l_stream, (opj_stream_read_fn) opj_read_from_cache);
 	opj_stream_set_skip_function(l_stream, (opj_stream_skip_fn) opj_skip_from_cache);
 	opj_stream_set_seek_function(l_stream, (opj_stream_seek_fn) opj_seek_from_cache);
 
-	read_total_size(&rd_chunk);
-	FILE *f = fopen("output.jp2", "wa");
-	while(rd_chunk.read_position < filesize) { 
-		char buf[MAX_CHUNK_SIZE];
-		int i;
-		OPJ_UINT64 read = opj_read_from_cache((char*)&buf, sizeof(buf) - 1, &rd_chunk);
-		fwrite(buf, MAX_CHUNK_SIZE,1,f);
-	}
-	fclose(f);
 	return l_stream;
 }
 

@@ -143,6 +143,7 @@ window.requestAnimFrame = (function(){
 		else if(url) { _baseParams = {u: url }; }
 		else { return; }
 
+		if(opts.useMemcached) { _baseParams.m = 1; }
 
 		var jp2Header = false;
 		var tiles = {};

@@ -1,19 +1,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <libmemcached/memcached.h>
 #include <openjpeg.h>
 #include <png.h>
+#include <unistd.h>
+#include <libmemcached/memcached.h>
+#include "lib/opj_memcached_stream.h"
 #include "lib/opj_res.h"
 #include "lib/opj2png.h"
-#include "lib/opj_memcached_stream.h"
 
 int main(int argc, char **argv) {
 	memcached_st *memc = memcached_create(NULL);
 	memcached_server_st *servers = NULL;
+	struct memcached_chunk memcached_chunk;
+
 	memcached_return rc;
 	servers = memcached_server_list_append(servers, "localhost", 11211, &rc);
+
+	opj_dparameters_t parameters;
+	opj_set_default_decoder_parameters(&parameters);
+	parameters.cp_reduce = 2;
 
 	rc = memcached_server_push(memc, servers);
 	if (rc != MEMCACHED_SUCCESS) { return 1; }
@@ -21,10 +27,32 @@ int main(int argc, char **argv) {
 
 	if(argc < 2) { return 1; }
 
-	opj_stream_t *l_stream = opj_init_memcached_stream_from_url(argv[1], memc);
-	if(l_stream == NULL) { return 1; }
+	struct opj_res resources = opj_init_memcached_from_url(argv[1], &parameters, memc);
 
-	opj_stream_destroy(l_stream);
+/*	resources.l_stream = opj_init_memcached_stream_from_url(argv[1], memc, &memcached_chunk);*/
+
+
+	if(resources.status == 0) {
+
+		opj_get_decoded_tile(resources.l_codec, resources.l_stream, resources.image, 55);
+/*		opj_codestream_info_v2_t* info = opj_get_cstr_info(resources.l_codec);
+		fprintf(stderr, "{\"x1\":%d,\"y1\":%d, \"tw\": %d, \"th\": %d, \"tdx\": %d, \"tdy\": %d, \"num_res\": %d, \"num_comps\": %d}\n", 
+			resources.image->x1, 
+			resources.image->y1,
+			info->tw,
+			info->th,
+			info->tdx,
+			info->tdy,
+			info->m_default_tile_info.tccp_info[0].numresolutions,
+			resources.image->numcomps
+		);
+		opj_destroy_cstr_info(&info);*/
+		writePNG(&resources, "dynatile", 0, 0, 128, 128, 1);
+	}
+
+//	if(l_stream == NULL) { return 1; }
+
+//	opj_stream_destroy(l_stream);
 
 	memcached_server_free(servers);
 	memcached_free(memc);

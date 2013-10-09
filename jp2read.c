@@ -22,6 +22,8 @@
 #include <string.h>
 #include <time.h>
 #include <png.h>
+#include <libmemcached/memcached.h>
+#include "lib/opj_memcached_stream.h"
 #include "lib/opj_res.h"
 #include "lib/opj2png.h"
 #include "lib/urldecode.h"
@@ -33,6 +35,7 @@ typedef enum {GET_HEADER, READ_TILE} operation_t;
 struct params {
 	int tile_index;
 	int reduction_factor;
+	unsigned short use_memcached;
 	char *filename;
 	char *url;
 	char *jsonp_callback;
@@ -48,6 +51,7 @@ static struct params *init_params(void) {
 	struct params *p = malloc(sizeof(struct params));
 	p->tile_index = 0;
 	p->reduction_factor = 0;
+	p->use_memcached = 0;
 	p->x = 0;
 	p->y = 0;
 	p->w = -1;
@@ -64,6 +68,7 @@ static void parseParam(char k, char *v, struct params *p) {
 	switch(k) {
 		case 't': p->tile_index = atoi(v); p->operation = READ_TILE; return;
 		case 'r': p->reduction_factor = atoi(v); return;
+		case 'm': p->use_memcached = atoi(v) > 0 ? 1 : 0; return;
 		case 'x': p->x = atoi(v); return;
 		case 'y': p->y = atoi(v); return;
 		case 'w': p->w = atoi(v); return;
@@ -95,7 +100,7 @@ static struct params *parse(char *qstr) {
 	return p;
 }
 
-static struct opj_res getTile(struct params *p) {
+static struct opj_res getTile(struct params *p, memcached_st *memc) {
 	struct opj_res resources;
 
 	opj_dparameters_t parameters;
@@ -103,8 +108,13 @@ static struct opj_res getTile(struct params *p) {
 	parameters.cp_reduce = p->reduction_factor;
 	parameters.cp_layer = 100;
 
-	if(p->filename) { resources = opj_init(p->filename, &parameters); }
-	else if(p->url) { resources = opj_init_from_url(p->url, &parameters); }
+	if(p->filename) { 
+		resources = opj_init(p->filename, &parameters); 
+	} else if(p->use_memcached && p->url && memc != NULL) { 
+		resources = opj_init_memcached_from_url(p->url, &parameters, memc);
+	} else if(p->url) { 
+		resources = opj_init_from_url(p->url, &parameters); 
+	}
 
 	if(!opj_get_decoded_tile(resources.l_codec, resources.l_stream, resources.image, p->tile_index)) {
 		resources.status = 1;
@@ -113,15 +123,25 @@ static struct opj_res getTile(struct params *p) {
 	return resources;
 }
 
-static int getJp2Specs (struct params *p, char *data) {
+static int getJp2Specs (struct params *p, char *data, memcached_st *memc) {
 	struct opj_res resources;
 	int read_status = READ_FAILURE;
 
 	opj_dparameters_t parameters;
 	opj_set_default_decoder_parameters(&parameters);
-	if(p->filename) { resources = opj_init(p->filename, &parameters); }
-	else if(p->url) { resources = opj_init_from_url(p->url, &parameters); }
-	else { sprintf(data, "{\"error\": \"No resource specified\"}"); return READ_FAILURE; }
+
+	if(p->filename) { 
+		resources = opj_init(p->filename, &parameters); 
+	} else if(p->use_memcached && p->url && memc != NULL) { 
+		resources = opj_init_memcached_from_url(p->url, &parameters, memc);
+	} else if(p->url) { 
+		resources = opj_init_from_url(p->url, &parameters); 
+	} else { 
+		sprintf(data, "{\"error\": \"No resource specified\"}"); 
+		return READ_FAILURE; 
+	}
+
+
 	if(resources.status == 0) {
 		opj_codestream_info_v2_t* info = opj_get_cstr_info(resources.l_codec);
 		sprintf(data, "{\"x1\":%d,\"y1\":%d, \"tw\": %d, \"th\": %d, \"tdx\": %d, \"tdy\": %d, \"num_res\": %d, \"num_comps\": %d}", 
@@ -167,9 +187,20 @@ int main(void) {
 	int status = READ_FAILURE;
 	struct params *p = parse(getenv("QUERY_STRING"));
 
+	memcached_st *memc = memcached_create(NULL);
+	memcached_server_st *servers = NULL;
+	memcached_return rc;
+	servers = memcached_server_list_append(servers, "localhost", 11211, &rc);
+
+	rc = memcached_server_push(memc, servers);
+	if (rc != MEMCACHED_SUCCESS) { 
+		servers = NULL; 
+		memcached_free(memc);
+	}
+
 	switch(p->operation) {
 		case READ_TILE:
-			res = getTile(p);
+			res = getTile(p, memc);
 			if(res.status == 0) {
 				puts("Content-type: image/png");
 				puts("Pragma: public");
@@ -185,7 +216,7 @@ int main(void) {
 			break;
 		case GET_HEADER:
 			puts("Content-type: application/json");
-			if( (status = getJp2Specs(p, data)) ) {
+			if( (status = getJp2Specs(p, data, memc)) ) {
 				puts("Pragma: public");
 				puts("Cache-Control: max-age=360000");
 				printf("Last-Modified: %s\n", timestamp);
@@ -204,6 +235,9 @@ int main(void) {
 	}
 	if(p->filename != NULL) { free(p->filename); }
 	if(p->jsonp_callback != NULL) { free(p->jsonp_callback); }
+	if(servers != NULL) { memcached_server_free(servers); }
+	if(memc != NULL) { memcached_free(memc); }
+
 	free(p);
 	return status;
 }

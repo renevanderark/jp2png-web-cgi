@@ -12,5 +12,5 @@ struct memcached_chunk {
 	OPJ_UINT64 read_position;
 };
 
-opj_stream_t *opj_init_memcached_stream_from_url(const char *url, memcached_st *memc);
+opj_stream_t *opj_init_memcached_stream_from_url(const char *url, memcached_st *memc, struct memcached_chunk *rd_chunk);
 

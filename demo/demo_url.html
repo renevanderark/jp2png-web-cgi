@@ -6,7 +6,8 @@
 		<script type="text/javascript">
 			$(document).ready(function() {
 				var baseOpts = {
-					url: "http://resolver.kb.nl/resolve?urn=dts:2977098:mpeg21:0001:image",
+					url: "http://resolver.kb.nl/resolve?urn=ddd:110565036:mpeg21:p004:image",
+					useMemcached: true,
 					workers: [
 						{ address: "http://localhost/cgi-bin/jp2", cores: 1 }
 					],

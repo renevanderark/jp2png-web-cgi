@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <openjpeg.h>
+#include <libmemcached/memcached.h>
+#include "opj_memcached_stream.h"
 #include "opj_url_stream.h"
 #include "opj_res.h"
 
@@ -28,7 +30,7 @@ static void error_callback(const char *msg, void *client_data) {(void)client_dat
 static void warning_callback(const char *msg, void *client_data) { (void)client_data; fprintf(stderr, "[WARNING] %s\n", msg);}
 static void info_callback(const char *msg, void *client_data) {(void)client_data; fprintf(stderr, "[INFO] %s\n", msg);}
 
-static struct opj_res opj_init_res(void) {
+struct opj_res opj_init_res(void) {
 	struct opj_res resources;
 
 	resources.status = -1;
@@ -41,7 +43,7 @@ static struct opj_res opj_init_res(void) {
 	return resources;
 }
 
-static int opj_init_from_stream(opj_dparameters_t *parameters, struct opj_res *resources) {
+int opj_init_from_stream(opj_dparameters_t *parameters, struct opj_res *resources) {
 
 	resources->image = NULL;
 	resources->l_codec = opj_create_decompress(OPJ_CODEC_JP2);
@@ -83,6 +85,15 @@ struct opj_res opj_init(const char *fname, opj_dparameters_t *parameters) {
 	resources.status = opj_init_from_stream(parameters, &resources);
 	return resources;
 }
+
+struct opj_res opj_init_memcached_from_url(const char *url, opj_dparameters_t *parameters, memcached_st *memc) {
+	struct opj_res resources = opj_init_res();
+	resources.memcached_chunk = malloc(sizeof(struct memcached_chunk));
+	resources.l_stream = opj_init_memcached_stream_from_url(url, memc, resources.memcached_chunk);
+	resources.status = opj_init_from_stream(parameters, &resources);
+	return resources;
+}
+
 
 struct opj_res opj_init_from_url(const char *url, opj_dparameters_t *parameters) {
 	struct opj_res resources = opj_init_res();

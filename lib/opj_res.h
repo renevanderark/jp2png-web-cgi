@@ -26,9 +26,12 @@ struct opj_res {
 	opj_image_t *image;
 	FILE *open_file;
 	struct opj_url_stream_data *p_url;
+	struct memcached_chunk *memcached_chunk;
 };
 
 void opj_cleanup(struct opj_res *resources);
+struct opj_res opj_init_res(void);
 struct opj_res opj_init(const char *fname, opj_dparameters_t *parameters);
 struct opj_res opj_init_from_url(const char *url, opj_dparameters_t *parameters);
-
+struct opj_res opj_init_memcached_from_url(const char *url, opj_dparameters_t *parameters, memcached_st *memc);
+int opj_init_from_stream(opj_dparameters_t *parameters, struct opj_res *resources);
