@@ -21,8 +21,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <openjpeg.h>
-#include <libmemcached/memcached.h>
-#include "opj_memcached_stream.h"
 #include "opj_url_stream.h"
 #include "opj_res.h"
 
