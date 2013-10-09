@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <libmemcached/memcached.h>
 #include <openjpeg.h>
+#include <png.h>
+#include "lib/opj_res.h"
+#include "lib/opj2png.h"
 #include "lib/opj_memcached_stream.h"
 
 int main(int argc, char **argv) {
