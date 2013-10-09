@@ -36,7 +36,6 @@ typedef enum {GET_HEADER, READ_TILE} operation_t;
 struct params {
 	int tile_index;
 	int reduction_factor;
-	unsigned short use_memcached;
 	char *filename;
 	char *url;
 	char *jsonp_callback;
@@ -131,7 +130,7 @@ static int getJp2Specs (struct params *p, char *data) {
 	opj_dparameters_t parameters;
 	opj_set_default_decoder_parameters(&parameters);
 
-	if(p->filename) { 
+	if(p->filename) {
 		resources = opj_init(p->filename, &parameters); 
 	} else if(p->url) { 
 		char *cachefile = download_to_cache(p->url, CACHEDIR);

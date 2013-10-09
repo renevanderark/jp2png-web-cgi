@@ -26,7 +26,7 @@ struct opj_res {
 	opj_image_t *image;
 	FILE *open_file;
 	struct opj_url_stream_data *p_url;
-	struct memcached_chunk *memcached_chunk;
+/*	struct memcached_chunk *memcached_chunk;*/
 };
 
 void opj_cleanup(struct opj_res *resources);
