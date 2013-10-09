@@ -24,11 +24,14 @@
 #include <png.h>
 #include <libmemcached/memcached.h>
 #include "lib/opj_memcached_stream.h"
+#include "lib/url2cache.h"
 #include "lib/opj_res.h"
 #include "lib/opj2png.h"
 #include "lib/urldecode.h"
 
 typedef enum {GET_HEADER, READ_TILE} operation_t;
+
+
 
 #define MAX_ARGS 9
 
@@ -109,8 +112,12 @@ static struct opj_res getTile(struct params *p) {
 	if(p->filename) { 
 		resources = opj_init(p->filename, &parameters); 
 	} else if(p->url) { 
-		resources = opj_init_from_url(p->url, &parameters); 
-	}
+		char *cachefile = download_to_cache(p->url, CACHEDIR);
+		if(cachefile != NULL) {
+			resources = opj_init(cachefile, &parameters);
+		}
+		/*		resources = opj_init_from_url(p->url, &parameters); */
+	} 
 
 	if(!opj_get_decoded_tile(resources.l_codec, resources.l_stream, resources.image, p->tile_index)) {
 		resources.status = 1;
@@ -129,7 +136,14 @@ static int getJp2Specs (struct params *p, char *data) {
 	if(p->filename) { 
 		resources = opj_init(p->filename, &parameters); 
 	} else if(p->url) { 
-		resources = opj_init_from_url(p->url, &parameters); 
+		char *cachefile = download_to_cache(p->url, CACHEDIR);
+		if(cachefile != NULL) {
+			resources = opj_init(cachefile, &parameters);
+		} else {
+			sprintf(data, "{\"error\": \"Resource unreachable\"}"); 
+			return READ_FAILURE; 
+		}
+/*		resources = opj_init_from_url(p->url, &parameters); */
 	} else { 
 		sprintf(data, "{\"error\": \"No resource specified\"}"); 
 		return READ_FAILURE; 
