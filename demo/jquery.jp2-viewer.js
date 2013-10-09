@@ -433,6 +433,7 @@ window.requestAnimFrame = (function(){
 			if(loadTrigger) { loadImage(); loadTrigger = false; }
 			drawIncompleteTiles();
 			if(incompleteTiles.length == 0) {
+				if(opts.onready) { opts.onready(); opts.onready = false; }
 				preloadHiddenTile();
 			}
 		}
