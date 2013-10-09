@@ -33,5 +33,5 @@ void opj_cleanup(struct opj_res *resources);
 struct opj_res opj_init_res(void);
 struct opj_res opj_init(const char *fname, opj_dparameters_t *parameters);
 struct opj_res opj_init_from_url(const char *url, opj_dparameters_t *parameters);
-struct opj_res opj_init_memcached_from_url(const char *url, opj_dparameters_t *parameters, memcached_st *memc);
+/*struct opj_res opj_init_memcached_from_url(const char *url, opj_dparameters_t *parameters, memcached_st *memc);*/
 int opj_init_from_stream(opj_dparameters_t *parameters, struct opj_res *resources);

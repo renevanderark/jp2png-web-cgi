@@ -85,7 +85,7 @@ struct opj_res opj_init(const char *fname, opj_dparameters_t *parameters) {
 	resources.status = opj_init_from_stream(parameters, &resources);
 	return resources;
 }
-
+/*
 struct opj_res opj_init_memcached_from_url(const char *url, opj_dparameters_t *parameters, memcached_st *memc) {
 	struct opj_res resources = opj_init_res();
 	resources.memcached_chunk = malloc(sizeof(struct memcached_chunk));
@@ -93,7 +93,7 @@ struct opj_res opj_init_memcached_from_url(const char *url, opj_dparameters_t *p
 	resources.status = opj_init_from_stream(parameters, &resources);
 	return resources;
 }
-
+*/
 
 struct opj_res opj_init_from_url(const char *url, opj_dparameters_t *parameters) {
 	struct opj_res resources = opj_init_res();

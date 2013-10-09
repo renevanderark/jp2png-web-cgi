@@ -22,8 +22,6 @@
 #include <string.h>
 #include <time.h>
 #include <png.h>
-#include <libmemcached/memcached.h>
-#include "lib/opj_memcached_stream.h"
 #include "lib/url2cache.h"
 #include "lib/opj_res.h"
 #include "lib/opj2png.h"
