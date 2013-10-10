@@ -98,7 +98,7 @@ static struct params *parse(char *qstr) {
 	return p;
 }
 
-static struct opj_res getTile(struct params *p) {
+static struct opj_res getTile(struct params *p, char *msg) {
 	struct opj_res resources;
 
 	opj_dparameters_t parameters;
@@ -114,12 +114,15 @@ static struct opj_res getTile(struct params *p) {
 			resources = opj_init(cachefile, &parameters);
 		} else {
 			resources.status = 1;
+			if(p->url) { sprintf(msg, "Resource is unreachable: '%s'", p->url); }
 			return resources;
 		}
 	}
 
 	if(!opj_get_decoded_tile(resources.l_codec, resources.l_stream, resources.image, p->tile_index)) {
 		resources.status = 1;
+		if(p->url) { sprintf(msg, "Cannot read resource: '%s'", p->url); }
+		else if(p->filename) { sprintf(msg, "Cannot read resource: '%s'", p->filename); }
 	}
 
 	return resources;
@@ -195,7 +198,7 @@ int main(void) {
 
 	switch(p->operation) {
 		case READ_TILE:
-			res = getTile(p);
+			res = getTile(p, data);
 			if(res.status == 0) {
 				puts("Content-type: image/png");
 				puts("Pragma: public");
@@ -205,7 +208,7 @@ int main(void) {
 				writePNG(&res, "dynatile", p->x, p->y, p->w, p->h, p->num_comps);
 			} else {
 				puts("Content-type: application/json");
-				printf("Status: 500 Internal Server Error\n\n{\"error\": \"generic\"}");
+				printf("Status: 500 Internal Server Error\n\n{\"error\": \"%s\"}\n", data);
 			}
 			opj_cleanup(&res);
 			break;
