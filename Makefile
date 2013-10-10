@@ -4,7 +4,7 @@ clean:
 	rm -f jp2.cgi
 
 compile:
-	gcc -I/usr/local/include/openjpeg-2.0/ lib/opj_url_stream.c lib/url2cache.c lib/opj_res.c lib/opj2png.c lib/urldecode.c jp2read.c -o jp2.cgi -fPIC -lm -lpng -lopenjp2 -lcurl -std=c99 -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes -Wold-style-definition -D_XOPEN_SOURCE=700
+	gcc -I/usr/local/include/openjpeg-2.0/ lib/url2cache.c lib/opj_res.c lib/opj2png.c lib/urldecode.c jp2read.c -o jp2.cgi -fPIC -lm -lpng -lopenjp2 -lcurl -std=c99 -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes -Wold-style-definition -D_XOPEN_SOURCE=700
 
 install:
 	cp jp2.cgi /usr/lib/cgi-bin/jp2

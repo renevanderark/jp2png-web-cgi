@@ -112,9 +112,11 @@ static struct opj_res getTile(struct params *p) {
 		char *cachefile = download_to_cache(p->url, CACHEDIR);
 		if(cachefile != NULL) {
 			resources = opj_init(cachefile, &parameters);
+		} else {
+			resources.status = 1;
+			return resources;
 		}
-		/*		resources = opj_init_from_url(p->url, &parameters); */
-	} 
+	}
 
 	if(!opj_get_decoded_tile(resources.l_codec, resources.l_stream, resources.image, p->tile_index)) {
 		resources.status = 1;
@@ -140,7 +142,6 @@ static int getJp2Specs (struct params *p, char *data) {
 			sprintf(data, "{\"error\": \"Resource unreachable\"}"); 
 			return READ_FAILURE; 
 		}
-/*		resources = opj_init_from_url(p->url, &parameters); */
 	} else { 
 		sprintf(data, "{\"error\": \"No resource specified\"}"); 
 		return READ_FAILURE; 
@@ -216,12 +217,16 @@ int main(void) {
 				printf("Last-Modified: %s\n", timestamp);
 				puts("Status: 200 OK\n\n");
 				if(p->jsonp_callback != NULL) {
-					printf("%s(%s);", p->jsonp_callback, data);
+					printf("%s(%s);\n", p->jsonp_callback, data);
 				} else {
-					printf("%s", data);
+					printf("%s\n", data);
 				}
 			} else {
-				printf("Status: 500 Internal Server Error\n\n%s", data);
+				if(p->jsonp_callback != NULL) {
+					printf("Status: 500 Internal Server Error\n\n%s(%s);\n", p->jsonp_callback, data);
+				} else {
+					printf("Status: 500 Internal Server Error\n\n%s\n", data);
+				}
 			}
 			break;
 		default:

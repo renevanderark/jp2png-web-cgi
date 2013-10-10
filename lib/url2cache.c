@@ -36,6 +36,7 @@ static char *url2filename(const char *url) {
 			case ':': 
 			case '/': 
 			case '&': 
+			case '=': 
 			case '?': ret[i] = '_';
 		}
 	}
