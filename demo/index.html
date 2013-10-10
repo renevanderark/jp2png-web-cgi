@@ -1,0 +1,98 @@
+<html>
+<head>
+<style>
+	a {text-decoration: underline; cursor: pointer; color: blue}
+	th { width: 400px; text-align: left; }
+	td { 
+		vertical-align: top; 
+		white-space: nowrap;
+	}
+</style>
+
+<script type="text/javascript" src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+<script type="text/javascript" src="jquery.mousewheel.js"></script>
+<script type="text/javascript" src="jquery.jp2-viewer.js"></script><script type="text/javascript">
+	function doeiswaturns() {
+		$(".is-wat-urns").html("<img src='spinner.gif'>");
+
+		$.ajax("http://tijdschriften.kb.nl/nl/api/results", {
+		data: { coll: "ddd", query: "test" },
+		dataType: "jsonp",
+		success: function(data) {
+			$("#kranten").html("");
+			for(var i in data.records) {
+			var urn1 = data.records[i].metadataKey.replace(/.+urn=/, "").replace(/:a[0-9]{4}$/, "") + ":p001:image";
+			var tit =	data.records[i].papertitle;
+			(function(urn, title) {$("#kranten").append($("<a>").attr("href", "index.html?urn=" + urn).html(title)).append("<br>");})(urn1, tit);
+			}
+		}
+		});
+
+		$.ajax("http://tijdschriften.kb.nl/nl/api/results", {
+		data: { coll: "dts", query: "test" },
+		dataType: "jsonp",
+		success: function(data) {
+			$("#tijdschriften").html("");
+			for(var i in data.records) {
+			var urn1 =data.records[i].titlePage.replace(/.+urn=/, "")+ ":image";
+			var tit =	data.records[i].title;
+			(function(urn, title) {$("#tijdschriften").append($("<a>").attr("href", "index.html?urn=" + urn).html(title)).append("<br>");})(urn1, tit);
+			}
+		}
+		});
+	}
+
+	$(document).ready(function() {
+		var urn = false;
+		var qs = location.href.split(/[\?\&]/);
+		for(var i in qs) {
+			var toks = qs[i].split("=");
+			if(toks[0] == "urn") { urn = toks[1]; }
+		}
+		if(urn) {
+			var baseOpts = {
+				url: "http://resolver.kb.nl/resolve?urn=" + urn,
+				workers: [
+					{ address: "http://localhost/cgi-bin/jp2", cores: 1 }
+				],
+				primary: "http://localhost/cgi-bin/jp2"
+			};
+
+			$("canvas#big")
+				.jp2Viewer($.extend({miniMap: $("canvas#mini")}, baseOpts))
+				.jp2ViewerEvents();
+
+			$("canvas#mini")
+				.jp2Viewer($.extend({ initScale: "full-height", wrapImage: true }, baseOpts))
+				.jp2MinimapEvents({ viewer: $("canvas#big")});
+		}
+		doeiswaturns()
+	});
+
+</script>
+</head>
+
+<body>
+	<canvas id="big" width="800" height="500" style="float: left; border: 1px solid">
+	</canvas>
+	<canvas id="mini" width="150" height="150" style="float: left; border: 1px solid">
+	</canvas>
+	<button onclick='$("canvas#big").trigger("rotateBy", 90)'>CW</button>
+	<button onclick='$("canvas#big").trigger("rotateBy", -90)'>CCW</button>
+	<br>
+	<div style="float: left; width: 350px;">
+		<table>
+		<tr><th>Newspapers</th><th>Periodicals</th>
+		<tr>
+		<td>
+		<div class="is-wat-urns" id="kranten"></div>
+		</td>
+		<td>
+		<div class="is-wat-urns" id="tijdschriften"></div>
+		</td>
+		</tr>
+		</table>
+	</div>
+</body>
+</html>
+
