@@ -305,6 +305,21 @@ window.requestAnimFrame = (function(){
 			}
 		}
 
+		function addErrorHandler(tile) {
+			tile.img.onerror = function() {
+				/* retry on error once! */
+				var _self = this;
+				var orig = this.src;
+				this.src = "";
+				this.onerror = function() {};
+				setTimeout(function() { 
+					_self.src = orig; 
+					drawTile(tile);
+					loadTrigger = true;
+				}, 500);
+			}
+		}
+
 		function loadImage(_hidden) {
 			var tileS = scale / reduce(1.0, reduction);
 			var ch = canvas.height;
@@ -348,6 +363,7 @@ window.requestAnimFrame = (function(){
 							}
 						}
 						tiles["redux-" + reduction][tileIndex] = tile;
+						addErrorHandler(tile);
 						tile.img.src = workers[currentWorker].address + "?" + $.param($.extend({
 							t: tileIndex,
 							r: reduction,
