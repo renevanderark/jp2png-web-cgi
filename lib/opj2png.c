@@ -35,6 +35,8 @@ static void setRGB(png_byte *ptr, int r, int g, int b) {
 int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, unsigned w, unsigned h, unsigned num_comps) {
 	int code = 0;
 
+	if(w == 0) { w = res->image->comps[0].w; }
+	if(h == 0) { h = res->image->comps[0].h; }
 	if(xPos >= res->image->comps[0].w) { xPos = 0; }
 	if(yPos >= res->image->comps[0].h) { yPos = 0; }
 	if(xPos + w >= res->image->comps[0].w) { w =  res->image->comps[0].w - xPos; }

@@ -53,8 +53,8 @@ static struct params *init_params(void) {
 	p->reduction_factor = 0;
 	p->x = 0;
 	p->y = 0;
-	p->w = -1;
-	p->h = -1;
+	p->w = 0;
+	p->h = 0;
 	p->num_comps = 3;
 	p->operation = GET_HEADER;
 	p->filename = NULL;
