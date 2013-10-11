@@ -53,6 +53,12 @@ To change the caching location an environment variable needs to be configured th
 Now the following url display a PNG file decoded from the sample image hosted on github:
 - http://localhost/cgi-bin/jp2?u=https%3A%2F%2Fgithub.com%2Frenevanderark%2Fjp2png-web-cgi%2Fblob%2Fmaster%2Fballoon.jp2%3Fraw%3Dtrue&t=1&r=3
 
+Keep your cache dir clean. That's what the other binary is for. Test it out like so:
+- ./jp2-cache-clean
+
+Add an entry to your crontab (somewhat) like the following to clean the cache every minute:
+- */1 * * * * /usr/local/bin/jp2-cache-clean --cache-dir /var/cache/jp2 --max-size 1024 2>> /var/log/jp2-cache-clean.log
+
 
 API
 ---
