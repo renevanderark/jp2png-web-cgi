@@ -4,7 +4,7 @@ jp2png-web-cgi
 A jp2 decoder and PNG encoder based on CGI using openjpeg
 
 Demo:
-http://openjpeg.kbresearch.nl/jp2demo/index.php?localfile=ddd_010459732_mpeg21_p001_image.jp2
+http://openjpeg.kbresearch.nl/jp2demo2/index.html?urn=ddd:010461485:mpeg21:p001:image
 
 
 tested on [openjpeg2.0](http://code.google.com/p/openjpeg/downloads/detail?name=openjpeg-2.0.0.tar.gz&can=2&q=)
@@ -34,7 +34,7 @@ AFTER INSTALLATION
 ==================
 
 After successful installation (sudo make install) the above binaries will have been copied to:
-- /var/www/cgi-bin/jp2
+- /usr/lib/cgi-bin/jp2
 - /usr/local/bin/jp2-cache-clean
 
 To check for success try the following url (should respond with a valid JSON encoded error: "No resource specified"):
