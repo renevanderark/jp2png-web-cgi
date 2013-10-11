@@ -1,10 +1,13 @@
 #/bin/bash
 
-echo "INSTALL THE FOLLOWING PACKAGES: gcc cmake make apache2"
+echo "INSTALL THE FOLLOWING PACKAGES: gcc cmake make apache2 libpng-dev libcurl4-openssl-dev"
 while true; do
 	read -p "Are you sure? [y/n/s(kip)] " yn
 	case $yn in
-		[Yy]* ) sudo apt-get install gcc cmake make apache2; break;;
+		[Yy]* ) 
+			sudo apt-get install gcc cmake make apache2  libpng-dev libcurl4-openssl-dev
+			sudo a2enmod cgi
+			break;;
 		[Ss]* ) break;;
 		[Nn]* ) exit;;
 		* ) echo "Please answer yes or no or skip.";;
@@ -73,10 +76,8 @@ while true; do
 done
 
 
-
+sudo mkdir /var/cache/jp2
+sudo chown www-data /var/cache/jp2
 echo "INSTALLATION PROCESS FINISHED"
-echo
-echo
-echo "TO KEEP YOUR CACHE-DIR CLEAN PLEASE SOMETHING LIKE THE FOLLOWING LINE TO YOUR CRONTAB (sudo crontab -e):"
-echo "*/1 * * * * /usr/local/bin/jp2-cache-clean --cache-dir /var/cache/jp2 --max-size 1024 2>> /var/log/jp2-cache-clean.log"
+echo "see README.md for more info"
 

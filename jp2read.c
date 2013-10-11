@@ -109,7 +109,9 @@ static struct opj_res getTile(struct params *p, char *msg) {
 	if(p->filename) { 
 		resources = opj_init(p->filename, &parameters); 
 	} else if(p->url) { 
-		char *cachefile = download_to_cache(p->url, CACHEDIR);
+		char *cachedir = CACHEDIR;
+		if(getenv("JP2_CACHEDIR") != NULL)  { cachedir = getenv("JP2_CACHEDIR"); }
+		char *cachefile = download_to_cache(p->url, cachedir);
 		if(cachefile != NULL) {
 			resources = opj_init(cachefile, &parameters);
 		} else {
@@ -138,11 +140,13 @@ static int getJp2Specs (struct params *p, char *data) {
 	if(p->filename) {
 		resources = opj_init(p->filename, &parameters); 
 	} else if(p->url) { 
-		char *cachefile = download_to_cache(p->url, CACHEDIR);
+		char *cachedir = CACHEDIR;
+		if(getenv("JP2_CACHEDIR") != NULL)  { cachedir = getenv("JP2_CACHEDIR"); }
+		char *cachefile = download_to_cache(p->url, cachedir);
 		if(cachefile != NULL) {
 			resources = opj_init(cachefile, &parameters);
 		} else {
-			sprintf(data, "{\"error\": \"Resource unreachable\"}"); 
+			sprintf(data, "{\"error\": \"Resource unreachable (cachedir: %s)\"}", cachedir); 
 			return READ_FAILURE; 
 		}
 	} else { 
