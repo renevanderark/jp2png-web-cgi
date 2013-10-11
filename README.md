@@ -47,7 +47,7 @@ CACHING
 For the script to work a caching directory with read/write access has to be available for apache2 (the www-user). This directory defaults to:
 - /var/cache/jp2
 
-To change the caching location an environment variable needs to be configure through the cgi module (/etc/apache2/mods-enabled/cgi.load):
+To change the caching location an environment variable needs to be configured through the cgi module (/etc/apache2/mods-enabled/cgi.load):
 - SetEnv JP2_CACHEDIR "/path/to/cache"
 
 Now the following url display a PNG file decoded from the sample image hosted on github:
@@ -66,7 +66,14 @@ The cgi scripts supports the following parameters (setting either 't' or 'u' sho
 - 'w': width of the decoded tile (x+w should not exceed the total width of the tile)
 - 'h': height of the decoded tile (y+h should not exceed the total height of the tile)
 - 'n': number of compositions of the tile (max supported is shown in the jp2 header; 1 becomes grayscale in all cases)
-- 'c[allback]': jsonp callback for remote origin website JSON support
+- 'c(allback)': jsonp callback for remote origin website JSON support
+
+DEMO
+----
+Skip all that and symlink the demo like this:
+- cd /var/www
+- sudo ln -s /path/to/project/demo
+- open a browser and surf to: http://localhost/demo/
 
 
 LOGGING
