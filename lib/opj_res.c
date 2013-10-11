@@ -27,6 +27,8 @@ static void error_callback(const char *msg, void *client_data) {(void)client_dat
 static void warning_callback(const char *msg, void *client_data) { (void)client_data; fprintf(stderr, "[WARNING] %s\n", msg);}
 static void info_callback(const char *msg, void *client_data) {(void)client_data; fprintf(stderr, "[INFO] %s\n", msg);}
 
+
+
 struct opj_res opj_init_res(void) {
 	struct opj_res resources;
 
@@ -62,9 +64,15 @@ int opj_init_from_stream(opj_dparameters_t *parameters, struct opj_res *resource
 		return 3;
 	}
 
-	opj_set_info_handler(resources->l_codec, info_callback,00);
-	opj_set_warning_handler(resources->l_codec, warning_callback,00);
-	opj_set_error_handler(resources->l_codec, error_callback,00);
+	if(getenv("JP2_VERBOSE") != NULL) {
+		opj_set_info_handler(resources->l_codec, info_callback,00);
+		opj_set_warning_handler(resources->l_codec, warning_callback,00);
+	}
+
+	if(getenv("JP2_SUPPRESS_ERRORS") == NULL) {
+		opj_set_error_handler(resources->l_codec, error_callback,00);
+	}
+
 	return 0;
 }
 

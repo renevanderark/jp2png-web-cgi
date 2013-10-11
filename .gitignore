@@ -1,3 +1,9 @@
 a.out
+jp2-cache-clean
+jp2.cgi
+openjpeg-2.0.0*
+
 demo/*.php
 demo/spinner.gif
+demo/test-embed.html
+

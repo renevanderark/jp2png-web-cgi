@@ -120,23 +120,24 @@ static int apply_cache_rules(char *cachedir, time_t lifetime, size_t max_size) {
 
 int main(int argc, char *argv[]) {
 	static struct option opts[] = {
+		{"verbose", no_argument, NULL, 'v'},
 		{"cache-dir", required_argument, NULL, 'd'},
 		{"lifetime", required_argument, NULL, 't'},
 		{"max-size", required_argument, NULL, 'm'},
-		{"verbose", no_argument, NULL, 'v'},
 		{NULL, 0, NULL, 0}
 	};
 	char ch;
 	char *cachedir = NULL;
 	time_t lifetime = 3600;
 	size_t max_size = 1024; 
-	while((ch = getopt_long(argc, argv, "d:t:", opts, NULL)) != -1) {
+	while((ch = getopt_long(argc, argv, "d:t:m:v:", opts, NULL)) != -1) {
 		switch(ch) {
 			case 'v':
 				verbose = 1;
 				break;
 			case 'd':
 				cachedir = optarg;
+				if(cachedir[strlen(cachedir) - 1] == '/') { cachedir[strlen(cachedir) - 1] = '\0'; }
 				break;
 			case 't':
 				lifetime = (time_t) strtol(optarg, NULL, 0);
@@ -146,7 +147,11 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	if(cachedir == NULL) { 
-		printf("Usage: %s --cache-dir /path/to/cache\n", argv[0]); 
+		printf("Usage: %s --cache-dir d [--lifetime t] [--max-size m] [--verbose]\n", argv[0]);
+		printf("\t--cache-dir d: the cache directory\n");
+		printf("\t--lifetime t: max lifetime of cached file in seconds (measuring from latest access time)\n");
+		printf("\t--max-size m: maximum total size of files in cache dir expressed in MB\n");
+
 		fprintf(stderr, "[ERROR] No cache dir specified\n", argv[0]); 
 		return 1; 
 	}

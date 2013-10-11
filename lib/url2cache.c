@@ -20,8 +20,6 @@ static int check_headers(const char *url) {
 	curl_easy_cleanup(ch);
 	curl_global_cleanup();
 
-	fprintf(stderr, "HTTP status code: %zu\n", http_code);
-
 	if(curl_code != CURLE_OK && curl_code != CURLE_ABORTED_BY_CALLBACK) { return 0; }
 	if(http_code != 200 ) { return 0; }
 	return 1;
