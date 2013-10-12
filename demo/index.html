@@ -8,6 +8,10 @@
 		vertical-align: top; 
 		white-space: nowrap;
 	}
+	div#buffering-msg {
+		position: absolute; z-index: 999; top: 150px; left: 200px; min-height: 100px; background-color: white; text-align: center; padding: 10px;
+		display: none;
+	}
 </style>
 
 <script type="text/javascript" src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
@@ -51,12 +55,14 @@
 			if(toks[0] == "urn") { urn = toks[1]; }
 		}
 		if(urn) {
+			$("#buffering-msg").show();
 			var baseOpts = {
 				url: "http://resolver.kb.nl/resolve?urn=" + urn,
 				workers: [
 					{ address: "http://localhost/cgi-bin/jp2", cores: 1 }
 				],
-				primary: "http://localhost/cgi-bin/jp2"
+				primary: "http://localhost/cgi-bin/jp2",
+				onheader: function() { $("#buffering-msg").hide() }
 			};
 
 			$("canvas#big")
@@ -78,6 +84,9 @@
 	</canvas>
 	<canvas id="mini" width="150" height="150" style="float: left; border: 1px solid">
 	</canvas>
+	<div id="buffering-msg">
+		Buffering, please wait<br /><img src="spinner.gif" />
+	</div>
 	<button onclick='$("canvas#big").trigger("rotateBy", 90)'>CW</button>
 	<button onclick='$("canvas#big").trigger("rotateBy", -90)'>CCW</button>
 	<br>

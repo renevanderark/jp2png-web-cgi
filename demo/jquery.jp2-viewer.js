@@ -386,6 +386,7 @@ window.requestAnimFrame = (function(){
 			if(opts.wrapImage) { canvas.height = jp2Header.y1 * scale; canvas.width = jp2Header.x1 * scale; }
 			ensureBounds();
 			loadImage();
+			if(opts.onheader) { opts.onheader(); }
 		}
 
 		function showImage() {
