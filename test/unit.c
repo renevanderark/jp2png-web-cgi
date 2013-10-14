@@ -29,8 +29,7 @@ int main(void) {
 		return CU_get_error();
 	}
 
-	if((NULL == CU_add_test(pSuite, "test opj_init_res", test_opj_init_res)) ||
-		(NULL == CU_add_test(pSuite, "test opj_init_res", test_opj_init_res))) {
+	if(NULL == CU_add_test(pSuite, "test opj_init_res", test_opj_init_res)) {
 		CU_cleanup_registry();
 		return CU_get_error();
 	}
