@@ -162,7 +162,7 @@ class Jp2ReadHTTPTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-	runner = unittest.TextTestRunner()
+	runner = unittest.TextTestRunner(verbosity=2)
 	test_suite = unittest.TestSuite()
 	test_suite.addTest(Jp2ReadHTTPTest("runHTTPHeaderTest", query_string="f=../balloon.jp2", content_type="application/json", header_bytes=137))
 	test_suite.addTest(Jp2ReadHTTPTest("runJP2HeaderTest", query_string="f=../balloon.jp2", content_type="application/json", header_bytes=137))
@@ -178,7 +178,5 @@ if __name__ == '__main__':
 	test_suite.addTest(Jp2ReadHTTPTest("runPNGoutOfBoundsTest", query_string="f=../balloon.jp2&t=0&r=5&x=31&y=31&w=2&h=2"))
 	test_suite.addTest(Jp2ReadHTTPTest("runPNGoutOfBoundsTest2", query_string="f=../balloon.jp2&t=0&r=5&x=-1&y=-1&w=2&h=2"))
 	test_suite.addTest(Jp2ReadHTTPTest("runPNGCropTest2", query_string="f=../balloon.jp2&t=0&r=5&x=10&y=10"))
-
-
 
 	runner.run (test_suite)
