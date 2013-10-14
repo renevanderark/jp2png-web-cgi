@@ -65,15 +65,15 @@ static struct params *init_params(void) {
 
 static void parseParam(char k, char *v, struct params *p) {
 	switch(k) {
-		case 't': p->tile_index = atoi(v); p->operation = READ_TILE; return;
-		case 'r': p->reduction_factor = atoi(v); return;
-		case 'x': p->x = atoi(v); return;
-		case 'y': p->y = atoi(v); return;
-		case 'w': p->w = atoi(v); return;
-		case 'h': p->h = atoi(v); return;
+		case 't': p->tile_index = strtol(v, NULL, 0); p->operation = READ_TILE; return;
+		case 'r': p->reduction_factor = strtol(v, NULL, 0); return;
+		case 'x': p->x = strtol(v, NULL, 0); return;
+		case 'y': p->y = strtol(v, NULL, 0); return;
+		case 'w': p->w = strtol(v, NULL, 0); return;
+		case 'h': p->h = strtol(v, NULL, 0); return;
 		case 'f': p->filename = url_decode(v); return;
 		case 'u': p->url = url_decode(v); return;
-		case 'n': p->num_comps = atoi(v); return;
+		case 'n': p->num_comps = strtol(v, NULL, 0); return;
 		case 'c': p->jsonp_callback = url_decode(v); return;
 		default: return;
 	}
