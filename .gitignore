@@ -6,3 +6,5 @@ openjpeg-2.0.0*
 demo/*.php
 demo/test-embed.html
 
+test/unit
+
