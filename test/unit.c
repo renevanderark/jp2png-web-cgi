@@ -4,16 +4,40 @@
 #include <CUnit/Basic.h>
 #include "../lib/opj_res.h"
 
-struct opj_res res;
+
 
 
 static void test_opj_init_res(void) {
-	res = opj_init_res();
+	struct opj_res res = opj_init_res();
 	CU_ASSERT_EQUAL(-1, res.status);
 	CU_ASSERT_EQUAL(NULL, res.open_file);
 	CU_ASSERT_EQUAL(NULL, res.l_stream);
 	CU_ASSERT_EQUAL(NULL, res.l_codec);
 	CU_ASSERT_EQUAL(NULL, res.image);
+}
+
+static void test_opj_init_from_stream(void) {
+	int status; 
+	struct opj_res res = opj_init_res();
+	opj_dparameters_t *p_p = NULL;
+	opj_dparameters_t p;
+	status = opj_init_from_stream(p_p, &res);
+	CU_ASSERT_EQUAL(2, status);
+
+
+	opj_set_default_decoder_parameters(&p);
+
+	status = opj_init_from_stream(&p, &res);
+	CU_ASSERT_EQUAL(3, status);
+
+	FILE *fptr = fopen("balloon.jp2", "rb");
+	res.l_stream = opj_stream_create_default_file_stream(fptr,1);
+	status = opj_init_from_stream(&p, &res);
+	CU_ASSERT_EQUAL(0, status);
+
+	opj_cleanup(&res);
+	fclose(fptr);
+	free(p_p);
 }
 
 int main(void) {
@@ -29,7 +53,8 @@ int main(void) {
 		return CU_get_error();
 	}
 
-	if(NULL == CU_add_test(pSuite, "test opj_init_res", test_opj_init_res)) {
+	if(	NULL == CU_add_test(pSuite, "test opj_init_res", test_opj_init_res) ||
+		NULL == CU_add_test(pSuite, "test opj_init_from_stream", test_opj_init_from_stream)) {
 		CU_cleanup_registry();
 		return CU_get_error();
 	}
