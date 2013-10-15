@@ -40,6 +40,21 @@ static void test_opj_init_from_stream(void) {
 	free(p_p);
 }
 
+static void test_opj_init(void) {
+	opj_dparameters_t p;
+	opj_set_default_decoder_parameters(&p);
+	struct opj_res res = opj_init("balloon.jp2", &p);
+	CU_ASSERT_EQUAL(0, res.status);
+
+	res = opj_init("foobar", &p);
+	CU_ASSERT_EQUAL(1, res.status);
+
+	res = opj_init("LICENSE", &p);
+	CU_ASSERT_EQUAL(3, res.status);
+	opj_cleanup(&res);
+
+}
+
 int main(void) {
 	CU_pSuite pSuite = NULL;
 
@@ -54,7 +69,8 @@ int main(void) {
 	}
 
 	if(	NULL == CU_add_test(pSuite, "test opj_init_res", test_opj_init_res) ||
-		NULL == CU_add_test(pSuite, "test opj_init_from_stream", test_opj_init_from_stream)) {
+		NULL == CU_add_test(pSuite, "test opj_init_from_stream", test_opj_init_from_stream) ||
+		NULL == CU_add_test(pSuite, "test opj_init", test_opj_init)) {
 		CU_cleanup_registry();
 		return CU_get_error();
 	}

@@ -96,9 +96,9 @@ struct opj_res opj_init(const char *fname, opj_dparameters_t *parameters) {
 }
 
 void opj_cleanup(struct opj_res *resources) {
-	if(resources->l_stream) { opj_stream_destroy(resources->l_stream); }
-	if(resources->l_codec) { opj_destroy_codec(resources->l_codec); }
-	if(resources->image) { opj_image_destroy(resources->image); }
-	if(resources->open_file) { fclose(resources->open_file); }
+	if(resources->l_stream) { opj_stream_destroy(resources->l_stream); resources->l_stream = NULL; }
+	if(resources->l_codec) { opj_destroy_codec(resources->l_codec);resources->l_codec = NULL; }
+	if(resources->image) { opj_image_destroy(resources->image); resources->image = NULL; }
+	if(resources->open_file) { fclose(resources->open_file); resources->open_file = NULL; }
 }
 
