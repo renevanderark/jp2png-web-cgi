@@ -4,9 +4,6 @@
 #include <CUnit/Basic.h>
 #include "../lib/opj_res.h"
 
-
-
-
 static void test_opj_init_res(void) {
 	struct opj_res res = opj_init_res();
 	CU_ASSERT_EQUAL(-1, res.status);
@@ -55,6 +52,19 @@ static void test_opj_init(void) {
 
 }
 
+static void test_opj_cleanup(void) {
+	opj_dparameters_t p;
+	opj_set_default_decoder_parameters(&p);
+	struct opj_res res = opj_init("balloon.jp2", &p);
+
+	opj_cleanup(&res);
+	CU_ASSERT_EQUAL(0, res.status);
+	CU_ASSERT_EQUAL(NULL, res.open_file);
+	CU_ASSERT_EQUAL(NULL, res.l_stream);
+	CU_ASSERT_EQUAL(NULL, res.l_codec);
+	CU_ASSERT_EQUAL(NULL, res.image);
+}
+
 int main(void) {
 	CU_pSuite pSuite = NULL;
 
@@ -70,7 +80,8 @@ int main(void) {
 
 	if(	NULL == CU_add_test(pSuite, "test opj_init_res", test_opj_init_res) ||
 		NULL == CU_add_test(pSuite, "test opj_init_from_stream", test_opj_init_from_stream) ||
-		NULL == CU_add_test(pSuite, "test opj_init", test_opj_init)) {
+		NULL == CU_add_test(pSuite, "test opj_init", test_opj_init) ||
+		NULL == CU_add_test(pSuite, "test opj_cleanup", test_opj_cleanup)) {
 		CU_cleanup_registry();
 		return CU_get_error();
 	}
