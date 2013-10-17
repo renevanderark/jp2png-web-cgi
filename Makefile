@@ -1,3 +1,5 @@
+CGI_BIN = /usr/lib/cgi-bin
+
 all: clean compile
 
 test: unit integration
@@ -21,12 +23,12 @@ stress:
 	test/parallel_stress.py --save-response
 
 install:
-	cp jp2.cgi /usr/lib/cgi-bin/jp2
+	cp jp2.cgi $(CGI_BIN)/jp2
 	cp jp2-cache-clean /usr/local/bin/jp2-cache-clean
 	chmod 755 /usr/local/bin/jp2-cache-clean
 
 uninstall:
-	rm -f /usr/lib/cgi-bin/jp2
+	rm -f $(CGI_BIN)/jp2
 	rm -f /usr/local/bin/jp2-cache-clean
 
 
