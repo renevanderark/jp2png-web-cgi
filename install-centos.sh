@@ -83,6 +83,7 @@ sudo apachectl start
 
 sudo mkdir /var/cache/jp2
 sudo chown apache /var/cache/jp2
+sudo chmod 777 /var/cache/jp2
 sudo chcon -R system_u:object_r:httpd_sys_content_t:s0 /var/cache/jp2
 
 echo "INSTALLATION PROCESS FINISHED"
