@@ -53,8 +53,8 @@ while true; do
 			cmake .
 			make
 			sudo make install
-			sudo ldconfig
 			sudo ln -s /usr/local/lib/libopenjp2.so.6 /usr/lib/libopenjp2.so.6
+			sudo ldconfig
 			cd ..
 			break;;
 		[Ss]* ) break;;
