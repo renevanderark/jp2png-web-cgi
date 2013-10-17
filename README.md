@@ -21,7 +21,8 @@ To compile this project has dependencies on the following maintained packages:
 
 And on the sources of the openjpeg2.0 project hosted via google code.
 
-The project has only been tested with 64-bits distro's of Ubuntu.
+The project has been tested with 64-bits distro's of Ubuntu 12.04 and 32-bit CentOS 6.4
+
 
 After successful compilation (make) the two binaries are built in the project directory:
 - jp2.cgi
