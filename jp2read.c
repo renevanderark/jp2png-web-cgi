@@ -27,7 +27,7 @@
 #include "lib/opj2png.h"
 #include "lib/urldecode.h"
 
-typedef enum {GET_HEADER, READ_TILE} operation_t;
+typedef enum {GET_HEADER, READ_TILE, READ_IMAGE} operation_t;
 
 
 
@@ -65,6 +65,7 @@ static struct params *init_params(void) {
 
 static void parseParam(char k, char *v, struct params *p) {
 	switch(k) {
+		case 'i': p->operation = READ_IMAGE; return;
 		case 't': p->tile_index = strtol(v, NULL, 0); p->operation = READ_TILE; return;
 		case 'r': p->reduction_factor = strtol(v, NULL, 0); return;
 		case 'x': p->x = strtol(v, NULL, 0); return;
@@ -121,8 +122,22 @@ static struct opj_res getTile(struct params *p, char *msg) {
 		}
 	}
 
-	if(!opj_get_decoded_tile(resources.l_codec, resources.l_stream, resources.image, p->tile_index)) {
-		resources.status = 1;
+
+	switch(p->operation) {
+		case READ_TILE:
+			if(!opj_get_decoded_tile(resources.l_codec, resources.l_stream, resources.image, p->tile_index)) {
+				resources.status = 1;
+			}
+			break;
+		case READ_IMAGE:
+			if(!(opj_decode(resources.l_codec, resources.l_stream, resources.image) && opj_end_decompress(resources.l_codec, resources.l_stream))) {
+				resources.status = 1;
+			}
+			break;
+		default: break; /* should not occur here */
+	}
+
+	if(resources.status == 1) {
 		if(p->url) { sprintf(msg, "Cannot read resource: '%s'", p->url); }
 		else if(p->filename) { sprintf(msg, "Cannot read resource: '%s'", p->filename); }
 	}
@@ -202,6 +217,7 @@ int main(void) {
 
 	switch(p->operation) {
 		case READ_TILE:
+		case READ_IMAGE:
 			res = getTile(p, data);
 			if(res.status == 0) {
 				puts("Content-type: image/png");
