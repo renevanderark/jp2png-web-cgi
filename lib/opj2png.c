@@ -23,6 +23,7 @@
 #include <math.h>
 #include <png.h>
 #include <string.h>
+#include <jpeglib.h>
 #include <openjpeg.h>
 #include "opj_res.h"
 #include "opj2png.h"
@@ -111,3 +112,52 @@ int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, uns
 	return code;
 }
 
+
+int writeJPEG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, unsigned w, unsigned h, unsigned num_comps) {
+        int code = 0;
+
+        if(w == 0) { w = res->image->comps[0].w; }
+        if(h == 0) { h = res->image->comps[0].h; }
+        if(xPos >= res->image->comps[0].w) { xPos = 0; }
+        if(yPos >= res->image->comps[0].h) { yPos = 0; }
+        if(xPos + w >= res->image->comps[0].w) { w =  res->image->comps[0].w - xPos; }
+        if(yPos + h >= res->image->comps[0].h) { h =  res->image->comps[0].h - yPos; }
+
+        struct jpeg_compress_struct cinfo;
+        struct jpeg_error_mgr       jerr;
+
+        cinfo.err = jpeg_std_error(&jerr);
+        jpeg_create_compress(&cinfo);
+        jpeg_stdio_dest(&cinfo, stdout);
+
+        cinfo.image_width      = w;
+        cinfo.image_height     = h;
+        cinfo.input_components = num_comps;
+        cinfo.in_color_space   = JCS_RGB;
+        jpeg_set_defaults(&cinfo);
+        jpeg_set_quality (&cinfo, 100, 1);
+        jpeg_start_compress(&cinfo, 1);
+
+	JSAMPLE rgb[w*num_comps];
+        JSAMPROW row_pointer[1];
+
+        while (cinfo.next_scanline < cinfo.image_height) {
+	        unsigned x;
+                for (x = xPos ; x < xPos + w ; x++) {
+                        int i = cinfo.next_scanline * res->image->comps[0].w + x;
+                        if(num_comps < 3) {
+				rgb[x*num_comps] = res->image->comps[0].data[i];
+                        } else {
+				rgb[x*num_comps] = res->image->comps[0].data[i];
+				rgb[x*num_comps+1] = res->image->comps[1].data[i];
+				rgb[x*num_comps+2] = res->image->comps[2].data[i];
+                        }
+                }
+                row_pointer[0] = & rgb;
+                (void) jpeg_write_scanlines(&cinfo, row_pointer, 1);
+        }
+        jpeg_finish_compress(&cinfo);
+        jpeg_destroy_compress(&cinfo);
+
+	return code;
+}
