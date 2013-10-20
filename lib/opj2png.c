@@ -113,7 +113,7 @@ int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, uns
 }
 
 
-int writeJPEG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, unsigned w, unsigned h, unsigned num_comps) {
+int writeJPEG(struct opj_res *res, unsigned xPos, unsigned yPos, unsigned w, unsigned h, unsigned num_comps) {
         int code = 0;
 
         if(w == 0) { w = res->image->comps[0].w; }
@@ -158,7 +158,7 @@ int writeJPEG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, un
 				rgb[(x-xPos)*num_comps+2] = res->image->comps[2].data[i];
                         }
                 }
-                row_pointer[0] = & rgb;
+                row_pointer[0] = (JSAMPROW) & rgb;
                 (void) jpeg_write_scanlines(&cinfo, row_pointer, 1);
         }
         jpeg_finish_compress(&cinfo);

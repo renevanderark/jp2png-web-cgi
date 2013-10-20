@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <openjpeg.h>
 #include <string.h>
 #include <time.h>
@@ -27,7 +28,7 @@
 #include "lib/opj2png.h"
 #include "lib/urldecode.h"
 
-typedef enum {GET_HEADER, READ_TILE, READ_IMAGE} operation_t;
+typedef enum {GET_HEADER, READ_TILE, READ_IMAGE, READ_AREA} operation_t;
 typedef enum {CT_PNG, CT_JPEG} content_type_t;
 
 
@@ -68,6 +69,7 @@ static struct params *init_params(void) {
 
 static void parseParam(char k, char *v, struct params *p) {
 	switch(k) {
+		case 'a': p->operation = READ_AREA; return;
 		case 'i': p->operation = READ_IMAGE; return;
 		case 'j': p->content_type = CT_JPEG; return;
 		case 't': p->tile_index = strtol(v, NULL, 0); p->operation = READ_TILE; return;
@@ -129,6 +131,7 @@ static struct opj_res getTile(struct params *p, char *msg) {
 
 	switch(p->operation) {
 		case READ_TILE:
+		case READ_AREA:
 			if(!opj_get_decoded_tile(resources.l_codec, resources.l_stream, resources.image, p->tile_index)) {
 				resources.status = 1;
 			}
@@ -211,6 +214,24 @@ static void getTime(char *tm) {
 	strftime(tm, 50, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
 }
 
+
+struct m_params {
+	struct params *p;
+	int tile_index;
+	int n;
+};
+
+static void *getArea(void *m_params) {
+	char buf[255];
+	struct opj_res res = getTile(((struct m_params *) m_params)->p, (char*)buf);
+	sprintf(buf, "/var/cache/jp2/file-%d.jpg", ((struct m_params *) m_params)->tile_index++);
+	if(((struct m_params *) m_params)->p->content_type == CT_PNG) {  writePNG(&res, "tile", ((struct m_params *) m_params)->p->x, ((struct m_params *) m_params)->p->y, ((struct m_params *) m_params)->p->w, ((struct m_params *) m_params)->p->h, ((struct m_params *) m_params)->p->num_comps, NULL); }
+	else { writeJPEG(&res, ((struct m_params *) m_params)->p->x, ((struct m_params *) m_params)->p->y, ((struct m_params *) m_params)->p->w, ((struct m_params *) m_params)->p->h, ((struct m_params *) m_params)->p->num_comps, NULL); }
+	opj_cleanup(&res);
+	((struct m_params *)m_params)->n++;
+	pthread_exit(NULL);
+}
+
 int main(void) {
 	char data[255];
 	char timestamp[50];
@@ -219,7 +240,23 @@ int main(void) {
 	int status = READ_FAILURE;
 	struct params *p = parse(getenv("QUERY_STRING"));
 
+	int i;
+	int n = 6;
+	pthread_t t[n];
+	struct m_params mp;
+	mp.n = 0;
+	mp.tile_index = 0;
 	switch(p->operation) {
+		case READ_AREA:
+			if(p->content_type == CT_PNG) { puts("Content-type: image/png"); }
+			else { puts("Content-type: image/jpeg"); }
+			printf("Status: 200 OK\n\n");
+			for(i = 0; i < n; i++) {
+				mp.p = p;
+				pthread_create(&t[i], NULL, getArea, &mp);
+			}
+			while(mp.n < n) { }
+			break;
 		case READ_TILE:
 		case READ_IMAGE:
 			res = getTile(p, data);
@@ -230,8 +267,8 @@ int main(void) {
 				puts("Cache-Control: max-age=360000");
 				printf("Last-Modified: %s\n", timestamp);
 				printf("Status: 200 OK\n\n");
-				if(p->content_type == CT_PNG) {  writePNG(&res, "dynatile", p->x, p->y, p->w, p->h, p->num_comps); }
-				else { writeJPEG(&res, p->x, p->y, p->w, p->h, p->num_comps); }
+				if(p->content_type == CT_PNG) {  writePNG(&res, "tile", p->x, p->y, p->w, p->h, p->num_comps, NULL); }
+				else { writeJPEG(&res, p->x, p->y, p->w, p->h, p->num_comps, NULL); }
 			} else {
 				puts("Content-type: application/json");
 				printf("Status: 500 Internal Server Error\n\n{\"error\": \"%s\"}\n", data);
@@ -265,5 +302,6 @@ int main(void) {
 	if(p->jsonp_callback != NULL) { free(p->jsonp_callback); }
 
 	free(p);
+	pthread_exit(NULL);
 	return status;
 }
