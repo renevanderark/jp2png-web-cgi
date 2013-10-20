@@ -1,11 +1,11 @@
 #/bin/bash
 
-echo "INSTALL THE FOLLOWING PACKAGES: gcc cmake  make apache2 libpng-dev libcurl4-openssl-dev libcunit1-dev"
+echo "INSTALL THE FOLLOWING PACKAGES: gcc cmake  make apache2 libpng-dev libjpeg-dev libcurl4-openssl-dev libcunit1-dev"
 while true; do
 	read -p "Are you sure? [y/n/s(kip)] " yn
 	case $yn in
 		[Yy]* ) 
-			sudo apt-get install gcc cmake make apache2  libpng-dev libcurl4-openssl-dev libcunit1-dev
+			sudo apt-get install gcc cmake make apache2 libpng-dev libjpeg-dev libcurl4-openssl-dev libcunit1-dev
 			sudo a2enmod cgi
 			break;;
 		[Ss]* ) break;;

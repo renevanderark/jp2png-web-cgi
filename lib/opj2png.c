@@ -132,8 +132,13 @@ int writeJPEG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, un
 
         cinfo.image_width      = w;
         cinfo.image_height     = h;
-        cinfo.input_components = num_comps;
-        cinfo.in_color_space   = JCS_RGB;
+	if(num_comps < 3)  {
+		cinfo.in_color_space = JCS_GRAYSCALE; 
+        	cinfo.input_components = 1;
+	} else { 
+		cinfo.in_color_space   = JCS_RGB; 
+        	cinfo.input_components = 3;
+	}
         jpeg_set_defaults(&cinfo);
         jpeg_set_quality (&cinfo, 100, 1);
         jpeg_start_compress(&cinfo, 1);
@@ -144,13 +149,13 @@ int writeJPEG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, un
         while (cinfo.next_scanline < cinfo.image_height) {
 	        unsigned x;
                 for (x = xPos ; x < xPos + w ; x++) {
-                        int i = cinfo.next_scanline * res->image->comps[0].w + x;
+                        int i = (cinfo.next_scanline + yPos) * res->image->comps[0].w + x;
                         if(num_comps < 3) {
-				rgb[x*num_comps] = res->image->comps[0].data[i];
+				rgb[x-xPos] = res->image->comps[0].data[i];
                         } else {
-				rgb[x*num_comps] = res->image->comps[0].data[i];
-				rgb[x*num_comps+1] = res->image->comps[1].data[i];
-				rgb[x*num_comps+2] = res->image->comps[2].data[i];
+				rgb[(x-xPos)*num_comps] = res->image->comps[0].data[i];
+				rgb[(x-xPos)*num_comps+1] = res->image->comps[1].data[i];
+				rgb[(x-xPos)*num_comps+2] = res->image->comps[2].data[i];
                         }
                 }
                 row_pointer[0] = & rgb;

@@ -142,6 +142,7 @@ window.requestAnimFrame = (function(){
 		if(filename) { _baseParams = {f: filename}; }
 		else if(url) { _baseParams = {u: url }; }
 		else { return; }
+		_baseParams.j = 1;
 
 		if(opts.useMemcached) { _baseParams.m = 1; }
 
@@ -452,7 +453,7 @@ window.requestAnimFrame = (function(){
 			drawIncompleteTiles();
 			if(incompleteTiles.length == 0) {
 				if(opts.onready) { opts.onready(); opts.onready = false; }
-				preloadHiddenTile();
+/*				preloadHiddenTile();*/
 			}
 		}
 

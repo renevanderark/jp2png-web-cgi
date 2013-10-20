@@ -28,6 +28,7 @@
 #include "lib/urldecode.h"
 
 typedef enum {GET_HEADER, READ_TILE, READ_IMAGE} operation_t;
+typedef enum {CT_PNG, CT_JPEG} content_type_t;
 
 
 
@@ -40,6 +41,7 @@ struct params {
 	char *url;
 	char *jsonp_callback;
 	operation_t operation;
+	content_type_t content_type;
 	unsigned x;
 	unsigned y;
 	unsigned w;
@@ -57,6 +59,7 @@ static struct params *init_params(void) {
 	p->h = 0;
 	p->num_comps = 3;
 	p->operation = GET_HEADER;
+	p->content_type = CT_PNG; 
 	p->filename = NULL;
 	p->url = NULL;
 	p->jsonp_callback = NULL;
@@ -66,6 +69,7 @@ static struct params *init_params(void) {
 static void parseParam(char k, char *v, struct params *p) {
 	switch(k) {
 		case 'i': p->operation = READ_IMAGE; return;
+		case 'j': p->content_type = CT_JPEG; return;
 		case 't': p->tile_index = strtol(v, NULL, 0); p->operation = READ_TILE; return;
 		case 'r': p->reduction_factor = strtol(v, NULL, 0); return;
 		case 'x': p->x = strtol(v, NULL, 0); return;
@@ -220,12 +224,14 @@ int main(void) {
 		case READ_IMAGE:
 			res = getTile(p, data);
 			if(res.status == 0) {
-				puts("Content-type: image/png");
+				if(p->content_type == CT_PNG) { puts("Content-type: image/png"); }
+				else { puts("Content-type: image/jpeg"); }
 				puts("Pragma: public");
 				puts("Cache-Control: max-age=360000");
 				printf("Last-Modified: %s\n", timestamp);
 				printf("Status: 200 OK\n\n");
-				writePNG(&res, "dynatile", p->x, p->y, p->w, p->h, p->num_comps);
+				if(p->content_type == CT_PNG) {  writePNG(&res, "dynatile", p->x, p->y, p->w, p->h, p->num_comps); }
+				else { writeJPEG(&res, NULL, p->x, p->y, p->w, p->h, p->num_comps); }
 			} else {
 				puts("Content-type: application/json");
 				printf("Status: 500 Internal Server Error\n\n{\"error\": \"%s\"}\n", data);
