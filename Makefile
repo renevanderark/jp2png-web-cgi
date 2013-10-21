@@ -31,4 +31,4 @@ uninstall:
 	rm -f $(CGI_BIN)/jp2
 	rm -f /usr/local/bin/jp2-cache-clean
 
-
+        
