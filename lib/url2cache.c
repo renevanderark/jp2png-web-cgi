@@ -66,10 +66,12 @@ char *download_to_cache(const char *url, const char *cachedir) {
 	int len = snprintf(NULL, 0, "%s/%s\n", cachedir, filename);
 	path = malloc(len);
 	snprintf(path, len, "%s/%s\n", cachedir, filename);
+	free(filename);
+
 	fp = fopen(path, "r");
 	if(fp != NULL) { fclose(fp); return path; }
+
 	fp = fopen(path, "w");
-	free(filename);
 	if(!check_headers(url) || fp == NULL) { return NULL; }
 
 	CURL *ch;
