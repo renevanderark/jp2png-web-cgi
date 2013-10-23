@@ -231,7 +231,7 @@ int main(void) {
 				printf("Last-Modified: %s\n", timestamp);
 				printf("Status: 200 OK\n\n");
 				if(p->content_type == CT_PNG) {  writePNG(&res, "dynatile", p->x, p->y, p->w, p->h, p->num_comps); }
-				else { writeJPEG(&res, p->x, p->y, p->w, p->h, p->num_comps); }
+				else { writeJPEG(&res, p->x, p->y, p->w, p->h, p->num_comps, NULL); }
 			} else {
 				puts("Content-type: application/json");
 				printf("Status: 500 Internal Server Error\n\n{\"error\": \"%s\"}\n", data);

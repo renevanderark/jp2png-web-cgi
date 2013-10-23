@@ -1,19 +1,19 @@
 /**
-    jp2png-cgi
-    Copyright (C) 2013  René van der Ark
+	jp2png-cgi
+	Copyright (C) 2013	René van der Ark
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program.	If not, see <http://www.gnu.org/licenses/>.
 */
 
 // PNG code: http://www.labbookpages.co.uk
@@ -40,8 +40,8 @@ int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, uns
 	if(h == 0) { h = res->image->comps[0].h; }
 	if(xPos >= res->image->comps[0].w) { xPos = 0; }
 	if(yPos >= res->image->comps[0].h) { yPos = 0; }
-	if(xPos + w >= res->image->comps[0].w) { w =  res->image->comps[0].w - xPos; }
-	if(yPos + h >= res->image->comps[0].h) { h =  res->image->comps[0].h - yPos; }
+	if(xPos + w >= res->image->comps[0].w) { w =	res->image->comps[0].w - xPos; }
+	if(yPos + h >= res->image->comps[0].h) { h =	res->image->comps[0].h - yPos; }
 
 	png_structp png_ptr;
 	png_infop info_ptr;
@@ -85,7 +85,7 @@ int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, uns
 
 	row = (png_bytep) malloc(3 * w * sizeof(png_byte));
 
-	
+
 	unsigned x, y;
 	for (y = yPos ; y < yPos + h ; y++) {
 		for (x = xPos ; x < xPos + w ; x++) {
@@ -113,56 +113,57 @@ int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, uns
 }
 
 
-int writeJPEG(struct opj_res *res, unsigned xPos, unsigned yPos, unsigned w, unsigned h, unsigned num_comps) {
-        int code = 0;
+int writeJPEG(struct opj_res *res, unsigned xPos, unsigned yPos, unsigned w, unsigned h, unsigned num_comps, FILE *fp) {
+	int code = 0;
 
-        if(w == 0) { w = res->image->comps[0].w; }
-        if(h == 0) { h = res->image->comps[0].h; }
-        if(xPos >= res->image->comps[0].w) { xPos = 0; }
-        if(yPos >= res->image->comps[0].h) { yPos = 0; }
-        if(xPos + w >= res->image->comps[0].w) { w =  res->image->comps[0].w - xPos; }
-        if(yPos + h >= res->image->comps[0].h) { h =  res->image->comps[0].h - yPos; }
+	if(w == 0) { w = res->image->comps[0].w; }
+	if(h == 0) { h = res->image->comps[0].h; }
+	if(xPos >= res->image->comps[0].w) { xPos = 0; }
+	if(yPos >= res->image->comps[0].h) { yPos = 0; }
+	if(xPos + w >= res->image->comps[0].w) { w =	res->image->comps[0].w - xPos; }
+	if(yPos + h >= res->image->comps[0].h) { h =	res->image->comps[0].h - yPos; }
 
-        struct jpeg_compress_struct cinfo;
-        struct jpeg_error_mgr       jerr;
+	struct jpeg_compress_struct cinfo;
+	struct jpeg_error_mgr		jerr;
 
-        cinfo.err = jpeg_std_error(&jerr);
-        jpeg_create_compress(&cinfo);
-        jpeg_stdio_dest(&cinfo, stdout);
+	cinfo.err = jpeg_std_error(&jerr);
+	jpeg_create_compress(&cinfo);
+	if(fp != NULL) { jpeg_stdio_dest(&cinfo, fp); }
+	else { jpeg_stdio_dest(&cinfo, stdout); }
 
-        cinfo.image_width      = w;
-        cinfo.image_height     = h;
-	if(num_comps < 3)  {
-		cinfo.in_color_space = JCS_GRAYSCALE; 
-        	cinfo.input_components = 1;
-	} else { 
-		cinfo.in_color_space   = JCS_RGB; 
-        	cinfo.input_components = 3;
+	cinfo.image_width		= w;
+	cinfo.image_height	 = h;
+	if(num_comps < 3)	{
+		cinfo.in_color_space = JCS_GRAYSCALE;
+		cinfo.input_components = 1;
+	} else {
+		cinfo.in_color_space	= JCS_RGB;
+		cinfo.input_components = 3;
 	}
-        jpeg_set_defaults(&cinfo);
-        jpeg_set_quality (&cinfo, 100, 1);
-        jpeg_start_compress(&cinfo, 1);
+	jpeg_set_defaults(&cinfo);
+	jpeg_set_quality (&cinfo, 100, 1);
+	jpeg_start_compress(&cinfo, 1);
 
 	JSAMPLE rgb[w*num_comps];
-        JSAMPROW row_pointer[1];
+	JSAMPROW row_pointer[1];
 
-        while (cinfo.next_scanline < cinfo.image_height) {
-	        unsigned x;
-                for (x = xPos ; x < xPos + w ; x++) {
-                        int i = (cinfo.next_scanline + yPos) * res->image->comps[0].w + x;
-                        if(num_comps < 3) {
+	while (cinfo.next_scanline < cinfo.image_height) {
+		unsigned x;
+		for (x = xPos ; x < xPos + w ; x++) {
+			int i = (cinfo.next_scanline + yPos) * res->image->comps[0].w + x;
+			if(num_comps < 3) {
 				rgb[x-xPos] = res->image->comps[0].data[i];
-                        } else {
+			} else {
 				rgb[(x-xPos)*num_comps] = res->image->comps[0].data[i];
 				rgb[(x-xPos)*num_comps+1] = res->image->comps[1].data[i];
 				rgb[(x-xPos)*num_comps+2] = res->image->comps[2].data[i];
-                        }
-                }
-                row_pointer[0] = (JSAMPROW) & rgb;
-                (void) jpeg_write_scanlines(&cinfo, row_pointer, 1);
-        }
-        jpeg_finish_compress(&cinfo);
-        jpeg_destroy_compress(&cinfo);
+			}
+		}
+		row_pointer[0] = (JSAMPROW) & rgb;
+		(void) jpeg_write_scanlines(&cinfo, row_pointer, 1);
+	}
+	jpeg_finish_compress(&cinfo);
+	jpeg_destroy_compress(&cinfo);
 
 	return code;
 }

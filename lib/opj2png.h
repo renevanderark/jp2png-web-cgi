@@ -17,4 +17,4 @@
 */
 
 int writePNG(struct opj_res *res, char *title, unsigned xPos, unsigned yPos, unsigned w, unsigned h, unsigned num_comps);
-int writeJPEG(struct opj_res *res, unsigned xPos, unsigned yPos, unsigned w, unsigned h, unsigned num_comps);
+int writeJPEG(struct opj_res *res, unsigned xPos, unsigned yPos, unsigned w, unsigned h, unsigned num_comps, FILE *fp);
