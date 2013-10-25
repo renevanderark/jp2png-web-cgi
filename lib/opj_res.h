@@ -19,13 +19,13 @@
 #define READ_FAILURE 0
 #define READ_SUCCESS 1
 
-struct opj_res {
+typedef struct opj_res {
 	int status;
 	opj_stream_t *l_stream;
 	opj_codec_t *l_codec;
 	opj_image_t *image;
 	FILE *open_file;
-};
+} opj_res_t;
 
 void opj_cleanup(struct opj_res *resources);
 struct opj_res opj_init_res(void);
