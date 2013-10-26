@@ -1,3 +1,20 @@
+/**
+    jp2png-cgi
+    Copyright (C) 2013  René van der Ark
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -22,6 +39,7 @@ typedef struct urlparams {
 	unsigned y;
 	unsigned w;
 	unsigned h;
+	unsigned quality;
 	unsigned short write_header;
 	FILE *fp;
 } urlparams_t;
@@ -118,6 +136,7 @@ static void parseParam(char k, char *v, urlparams_t *p) {
 		case 'y': p->y = strtol(v, NULL, 0); return;
 		case 'w': p->w = strtol(v, NULL, 0); return;
 		case 'h': p->h = strtol(v, NULL, 0); return;
+		case 'q': p->quality = strtol(v, NULL, 0); return;
 		case 'u': p->url = url_decode(v); return;
 		case 'o': p->write_header = 0; p->fp = fopen(url_decode(v), "wb"); return;
 		default: return;
@@ -158,6 +177,8 @@ static int get_decoded_area(urlparams_t *urlparams, shared_image_resource_t *tre
 
 	opj_set_default_decoder_parameters(&decoder_parameters);
 	decoder_parameters.cp_reduce = urlparams->reduction_factor;
+	decoder_parameters.cp_layer = urlparams->quality;
+	
 
 	decoder_resources = opj_init(cachefile, &decoder_parameters);
 	opj_codestream_info_v2_t* info = opj_get_cstr_info(decoder_resources.l_codec);
@@ -240,7 +261,7 @@ int main(void) {
 	}
 
 	jpeg_set_defaults(&cinfo);
-	jpeg_set_quality (&cinfo, 100, 1);
+	jpeg_set_quality (&cinfo, urlparams.quality, 1);
 	jpeg_start_compress(&cinfo, 1);
 	JSAMPROW row_pointer[1];
 	JSAMPLE rgb[shared_resource.x1 * shared_resource.num_comps];
@@ -262,7 +283,7 @@ int main(void) {
 
 	free(shared_resource.scanlines);
 	fclose(fp);
-	fprintf(stderr, "done\n");
+	fprintf(stderr, "done doing\n");
 	pthread_exit(NULL);
 	return 0;
 }
