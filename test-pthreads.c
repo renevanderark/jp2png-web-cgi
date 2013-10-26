@@ -224,35 +224,19 @@ static int get_decoded_area(urlparams_t *urlparams, shared_image_resource_t *tre
 	return 0;
 }
 
-int main(void) {
-	urlparams_t urlparams;
-	shared_image_resource_t shared_resource;
+static int encodeJPEG(urlparams_t *urlparams, shared_image_resource_t *shared_resource) {
 
-
-	parse_query(&urlparams, getenv("QUERY_STRING"));
-	(void) get_decoded_area(&urlparams, &shared_resource);
-
-	if(urlparams.write_header) {
-		puts("Content-type: image/jpeg"); 
-		puts("Pragma: public");
-		puts("Cache-Control: max-age=360000");
-		puts("Status: 200 OK\n");
-	}
-
-
-
-
-	FILE *fp = urlparams.fp;
+	FILE *fp = urlparams->fp;
 	struct jpeg_compress_struct cinfo;
-	struct jpeg_error_mgr		jerr;
+	struct jpeg_error_mgr jerr;
 
 	cinfo.err = jpeg_std_error(&jerr);
 	jpeg_create_compress(&cinfo);
 	jpeg_stdio_dest(&cinfo, fp);
 
-	cinfo.image_width = shared_resource.x1;
-	cinfo.image_height = shared_resource.y1;
-	if(shared_resource.num_comps < 3)	{
+	cinfo.image_width = shared_resource->x1;
+	cinfo.image_height = shared_resource->y1;
+	if(shared_resource->num_comps < 3)	{
 		cinfo.in_color_space = JCS_GRAYSCALE;
 		cinfo.input_components = 1;
 	} else {
@@ -261,29 +245,55 @@ int main(void) {
 	}
 
 	jpeg_set_defaults(&cinfo);
-	jpeg_set_quality (&cinfo, urlparams.quality, 1);
+	jpeg_set_quality (&cinfo, urlparams->quality, 1);
 	jpeg_start_compress(&cinfo, 1);
 	JSAMPROW row_pointer[1];
-	JSAMPLE rgb[shared_resource.x1 * shared_resource.num_comps];
+	JSAMPLE rgb[shared_resource->x1 * shared_resource->num_comps];
 	unsigned x,y,i;
-	for(y = 0; y < shared_resource.y1; y++) {
-		for(x = 0; x < shared_resource.x1; x++) {
-			for(i = 0; i < shared_resource.num_comps; i++) {
-				rgb[x*shared_resource.num_comps+i] = shared_resource.scanlines[y].rgb[x*shared_resource.num_comps+i];
+	for(y = 0; y < shared_resource->y1; y++) {
+		for(x = 0; x < shared_resource->x1; x++) {
+			for(i = 0; i < shared_resource->num_comps; i++) {
+				rgb[x*shared_resource->num_comps+i] = shared_resource->scanlines[y].rgb[x*shared_resource->num_comps+i];
 			}
 		}
 		row_pointer[0] = (JSAMPROW) &rgb;
 		(void) jpeg_write_scanlines(&cinfo, row_pointer, 1);
 
-		free(shared_resource.scanlines[y].rgb);
+		free(shared_resource->scanlines[y].rgb);
 	}
 	jpeg_finish_compress(&cinfo);
 	jpeg_destroy_compress(&cinfo);
 	
 
-	free(shared_resource.scanlines);
+	free(shared_resource->scanlines);
 	fclose(fp);
-	fprintf(stderr, "done doing\n");
+	return 0;
+}
+
+int main(void) {
+	urlparams_t urlparams;
+	shared_image_resource_t shared_resource;
+
+
+	parse_query(&urlparams, getenv("QUERY_STRING"));
+	fprintf(stderr, "start decoding\n");
+	int status = get_decoded_area(&urlparams, &shared_resource);
+	if(status > 0)  {
+		puts("Content-type: text/plain"); 
+		puts("Status: 500 Internal Server Error\n");	
+		puts("Internal Server Error");
+		return 1;
+	}
+
+	fprintf(stderr, "start encoding\n");
+	if(urlparams.write_header) {
+		puts("Content-type: image/jpeg"); 
+		puts("Pragma: public");
+		puts("Cache-Control: max-age=360000");
+		puts("Status: 200 OK\n");
+	}
+	status = encodeJPEG(&urlparams, &shared_resource);
+
 	pthread_exit(NULL);
 	return 0;
 }
