@@ -59,9 +59,9 @@
 			var baseOpts = {
 				url: "http://resolver.kb.nl/resolve?urn=" + urn,
 				workers: [
-					{ address: "http://" + location.hostname + "/cgi-bin/jp2", cores: 1 }
+					{ address: "http://" + location.hostname + "/cgi-bin/jp2.cgi", cores: 1 }
 				],
-				primary: "http://" + location.hostname + "/cgi-bin/jp2",
+				primary: "http://" + location.hostname + "/cgi-bin/jp2.cgi",
 				onheader: function() { $("#buffering-msg").hide() }
 			};
 

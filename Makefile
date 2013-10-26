@@ -23,12 +23,12 @@ stress:
 	test/parallel_stress.py --save-response
 
 install:
-	cp jp2.cgi $(CGI_BIN)/jp2
+	cp jp2.cgi $(CGI_BIN)/jp2.cgi
 	cp jp2-cache-clean /usr/local/bin/jp2-cache-clean
 	chmod 755 /usr/local/bin/jp2-cache-clean
 
 uninstall:
-	rm -f $(CGI_BIN)/jp2
+	rm -f $(CGI_BIN)/jp2.cgi
 	rm -f /usr/local/bin/jp2-cache-clean
 
         
