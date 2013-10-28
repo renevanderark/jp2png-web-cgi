@@ -44,7 +44,7 @@ typedef struct urlparams {
 } urlparams_t;
 
 typedef struct chunked_scanline {
-	JSAMPLE *rgb;
+    JSAMPLE *rgb;
 	unsigned n_chunks;
 	unsigned chunks_done;
 } chunked_scanline_t;
@@ -64,11 +64,11 @@ typedef struct shared_image_resource {
 } shared_image_resource_t;
 
 typedef struct thr_arg {
-		opj_dparameters_t *params;
-		shared_image_resource_t *shared_resource;
-		unsigned tile_index_start;
-		unsigned tile_index_end;
-		char *cachefile;
+	opj_dparameters_t *params;
+	shared_image_resource_t *shared_resource;
+	unsigned tile_index_start;
+	unsigned tile_index_end;
+	char *cachefile;
 } thr_args_t;
 
 
@@ -80,7 +80,7 @@ static void buffer_scanlines(opj_image_t *image, unsigned tile_index, shared_ima
 	unsigned yPos = tileY * shared_resource->th;
 	unsigned x, y, i = 0;
 	
-	for(y = yPos; y < yPos + image->comps[0].h; y++) {
+    for(y = yPos; y < yPos + image->comps[0].h; y++) {
 		for(x = xPos; x < xPos + image->comps[0].w; x++, i++) {
 			if(shared_resource->num_comps < 3) {
 				shared_resource->scanlines[y].rgb[x] = image->comps[0].data[i];
@@ -123,6 +123,7 @@ static void init_params(urlparams_t *params) {
 	params->y = 0;
 	params->w = 0;
 	params->h = 0;
+	params->quality = 100;
 	params->url = NULL;
 	params->fp = stdout;
 	params->write_header = 1;
