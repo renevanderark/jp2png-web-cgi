@@ -152,7 +152,7 @@ int main(int argc, char *argv[]) {
 		printf("\t--lifetime t: max lifetime of cached file in seconds (measuring from latest access time)\n");
 		printf("\t--max-size m: maximum total size of files in cache dir expressed in MB\n");
 
-		fprintf(stderr, "[ERROR] No cache dir specified\n", argv[0]); 
+		fprintf(stderr, "[ERROR] No cache dir specified %s\n", argv[0]); 
 		return 1; 
 	}
 

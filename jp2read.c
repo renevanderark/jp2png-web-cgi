@@ -208,7 +208,7 @@ static void getTime(char *tm) {
 	time (&rawtime);
 	timeinfo = localtime (&rawtime);
 
-	strftime(tm, 50, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
+	strftime(tm, 50, "%a, %d %b %Y %H:%M:%S CEST", timeinfo);
 }
 
 int main(void) {

@@ -21,11 +21,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <openjpeg.h>
+#include "log.h"
 #include "opj_res.h"
 
-static void error_callback(const char *msg, void *client_data) {(void)client_data; fprintf(stderr, "[ERROR] %s\n", msg);}
-static void warning_callback(const char *msg, void *client_data) { (void)client_data; fprintf(stderr, "[WARNING] %s\n", msg);}
-static void info_callback(const char *msg, void *client_data) {(void)client_data; fprintf(stderr, "[INFO] %s\n", msg);}
+static void error_callback(const char *msg, void *client_data) {(void)client_data; log_error(msg);}
+static void warning_callback(const char *msg, void *client_data) { (void)client_data; log_warning(msg);}
+static void info_callback(const char *msg, void *client_data) {(void)client_data; log_info(msg);}
 
 
 
