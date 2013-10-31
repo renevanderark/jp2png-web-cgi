@@ -28,7 +28,7 @@
 #include "lib/opj_res.h"
 #include "lib/opj2png.h"
 
-#define SPAWN_THREADS 2
+#define SPAWN_THREADS 7
 #define MAX_ARGS 6
 
 typedef struct urlparams {
@@ -55,6 +55,8 @@ typedef struct shared_image_resource {
 	unsigned tilesY;
 	unsigned sourceTilesX;
 	unsigned num_comps;
+	unsigned x0;
+	unsigned y0;
 	unsigned x1;
 	unsigned y1;
 	OPJ_UINT32 tw;
@@ -82,18 +84,23 @@ static void buffer_scanlines(opj_image_t *image, unsigned tile_index, shared_ima
 	unsigned x, y;
 /*	fprintf(stderr,"Writing scanlines for x0/y0/x1/y1: %d/%d/%d/%d\n", xPos, yPos,xPos + image->comps[0].w,yPos + image->comps[0].h);*/
 	for(y = yPos; y < yPos + image->comps[0].h && y < shared_resource->y1; y++) {
+		int yOut = y - shared_resource->y0;
+		if(yOut < 0) { continue; }
 		for(x = xPos; x < xPos + image->comps[0].w && x < shared_resource->x1; x++) {
 			unsigned pix = (x - xPos) + ((y - yPos) * image->comps[0].w);
+			int xOut = x - shared_resource->x0;
+			if(xOut < 0) { continue; }
 			if(shared_resource->num_comps < 3) {
-				shared_resource->scanlines[y].rgb[x] = image->comps[0].data[pix];
+				shared_resource->scanlines[yOut].rgb[xOut] = image->comps[0].data[pix];
 			} else {
-				shared_resource->scanlines[y].rgb[x*shared_resource->num_comps] = image->comps[0].data[pix];
-				shared_resource->scanlines[y].rgb[x*shared_resource->num_comps+1] = image->comps[1].data[pix];
-				shared_resource->scanlines[y].rgb[x*shared_resource->num_comps+2] = image->comps[2].data[pix];
+				shared_resource->scanlines[yOut].rgb[xOut*shared_resource->num_comps] = image->comps[0].data[pix];
+				shared_resource->scanlines[yOut].rgb[xOut*shared_resource->num_comps+1] = image->comps[1].data[pix];
+				shared_resource->scanlines[yOut].rgb[xOut*shared_resource->num_comps+2] = image->comps[2].data[pix];
 			}
 		}
 		shared_resource->scanlines[y].chunks_done++;
 	}
+
 }
 
 static void *processTile(void *args) {
@@ -192,11 +199,19 @@ static int get_decoded_area(urlparams_t *urlparams, shared_image_resource_t *sha
 	decoder_resources = opj_init(cachefile, &decoder_parameters);
 	opj_codestream_info_v2_t* info = opj_get_cstr_info(decoder_resources.l_codec);
 
-	if(urlparams->h == 0) { urlparams->h = reduce(decoder_resources.image->y1, decoder_parameters.cp_reduce); }
-	if(urlparams->w == 0) { urlparams->w = reduce(decoder_resources.image->x1, decoder_parameters.cp_reduce); }
-	
-	shared_resource->y1 = urlparams->h;
-	shared_resource->x1 = urlparams->w; 
+	unsigned y1_resized = reduce(decoder_resources.image->y1, decoder_parameters.cp_reduce);
+	unsigned x1_resized = reduce(decoder_resources.image->x1, decoder_parameters.cp_reduce);
+	if(urlparams->h == 0) { urlparams->h = y1_resized; }
+	if(urlparams->w == 0) { urlparams->w = x1_resized; }
+
+	shared_resource->y0 = urlparams->y;
+	shared_resource->x0 = urlparams->x; 
+	shared_resource->y1 = urlparams->h + urlparams->y;
+	shared_resource->x1 = urlparams->w + urlparams->x;
+
+	if(shared_resource->x1 > x1_resized) { shared_resource->x1 = x1_resized; }
+	if(shared_resource->y1 > y1_resized) { shared_resource->y1 = y1_resized; }
+
 	shared_resource->tw = reduce(info->tdx, decoder_parameters.cp_reduce);
 	shared_resource->th = reduce(info->tdy, decoder_parameters.cp_reduce);
 	shared_resource->tilesX = (unsigned) ceil((double)shared_resource->x1 / (double)shared_resource->tw);
@@ -206,28 +221,8 @@ static int get_decoded_area(urlparams_t *urlparams, shared_image_resource_t *sha
 	unsigned tileX = (unsigned) floor((double) urlparams->x / (double)shared_resource->tw);
 	unsigned tileY = (unsigned) floor((double) urlparams->y / (double)shared_resource->th);
 
-	if(shared_resource->tilesX > info->tw) { shared_resource->tilesX = info->tw; }
-	if(shared_resource->tilesY > info->th) { shared_resource->tilesY = info->th; }
-
-	fprintf(stderr, " x1 / y1: %d / %d\n", shared_resource->x1, shared_resource->y1);
-	fprintf(stderr, " tilesX / tilesY: %d / %d\n", shared_resource->tilesX, shared_resource->tilesY);
-/*
-			var tileS = scale / reduce(1.0, reduction);
-			var ch = canvas.height;
-			var cw = canvas.width;
-			if(rotation == 90 || rotation == 270) { var swp = cw; cw = ch; ch = swp; }
-			var tilesX = Math.ceil(cw / (jp2Header.tdx * scale)) + 1;
-			var tilesY = Math.ceil(ch / (jp2Header.tdy * scale)) + 1;
-			var tileX = Math.floor(-xPos / (jp2Header.tdx * scale));
-			var tileY = Math.floor(-yPos / (jp2Header.tdy * scale));
-
-			if(tileX < 0) { tileX = 0; }
-			if(tileY < 0) { tileY = 0; }
-
-			if(tileX + tilesX > jp2Header.tw)  { tilesX = jp2Header.tw - tileX; }
-			if(tileY + tilesY > jp2Header.th)  { tilesY = jp2Header.th - tileY; }
-*/
-
+	if(shared_resource->tilesX + tileX > info->tw) { shared_resource->tilesX = info->tw - tileX; }
+	if(shared_resource->tilesY + tileY > info->th) { shared_resource->tilesY = info->th - tileY; }
 
 	unsigned n = 0;
 	pthread_t t[SPAWN_THREADS];
@@ -256,8 +251,8 @@ static int get_decoded_area(urlparams_t *urlparams, shared_image_resource_t *sha
 		args[n].tiles = malloc(sizeof(unsigned) * tiles_per_thread);
 	}
 
-	for(cur_thread = 0, x = tileX; x < tileX + shared_resource->tilesX; x++) {
-		for(y = tileY; y < tileY + shared_resource->tilesY; y++) {
+	for(cur_thread = 0, y = tileY; y < tileY + shared_resource->tilesY; y++) {
+		for(x = tileX; x < tileX + shared_resource->tilesX; x++) {
 			unsigned tile_index = x + (y * info->tw);
 			args[cur_thread].tiles[args[cur_thread].n_tiles++] = tile_index;
 			if(++cur_thread == SPAWN_THREADS) { cur_thread = 0; }
@@ -268,6 +263,14 @@ static int get_decoded_area(urlparams_t *urlparams, shared_image_resource_t *sha
 	opj_cleanup(&decoder_resources);
 
 	for(n = 0; n < SPAWN_THREADS; n++) {
+		char distrib_info[50];
+		sprintf(distrib_info, "tiles alotted to thread %d:", n);
+		log_debug(distrib_info);
+		unsigned i;
+		for(i = 0; i < args[n].n_tiles; i++) {
+			fprintf(stderr, "%d ", args[n].tiles[i]);
+		}
+		fprintf(stderr, "\n");
 		pthread_create(&t[n], NULL, processTile, &args[n]);
 	}
 
@@ -287,8 +290,8 @@ static int encodeJPEG(urlparams_t *urlparams, shared_image_resource_t *shared_re
 	jpeg_create_compress(&cinfo);
 	jpeg_stdio_dest(&cinfo, fp);
 
-	cinfo.image_width = shared_resource->x1;
-	cinfo.image_height = shared_resource->y1;
+	cinfo.image_width = shared_resource->x1 - shared_resource->x0;
+	cinfo.image_height = shared_resource->y1 - shared_resource->y0;
 	if(shared_resource->num_comps < 3)	{
 		cinfo.in_color_space = JCS_GRAYSCALE;
 		cinfo.input_components = 1;
