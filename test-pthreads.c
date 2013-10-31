@@ -26,9 +26,9 @@
 #include "lib/url2cache.h"
 #include "lib/log.h"
 #include "lib/opj_res.h"
+#include "lib/opj2png.h"
 
-#define SPAWN_THREADS 3
-
+#define SPAWN_THREADS 2
 #define MAX_ARGS 6
 
 typedef struct urlparams {
@@ -53,6 +53,7 @@ typedef struct shared_image_resource {
 	unsigned tiles_done;
 	unsigned tilesX;
 	unsigned tilesY;
+	unsigned sourceTilesX;
 	unsigned num_comps;
 	unsigned x1;
 	unsigned y1;
@@ -74,20 +75,21 @@ typedef struct thr_arg {
 
 
 static void buffer_scanlines(opj_image_t *image, unsigned tile_index, shared_image_resource_t *shared_resource) {
-	unsigned tileY = tile_index / shared_resource->tilesX;
-	unsigned tileX = tile_index - (shared_resource->tilesX * tileY);
+	unsigned tileY = tile_index / shared_resource->sourceTilesX;
+	unsigned tileX = tile_index - (shared_resource->sourceTilesX * tileY);
 	unsigned xPos = tileX * shared_resource->tw;
 	unsigned yPos = tileY * shared_resource->th;
-	unsigned x, y, i = 0;
-	
-    for(y = yPos; y < yPos + image->comps[0].h; y++) {
-		for(x = xPos; x < xPos + image->comps[0].w; x++, i++) {
+	unsigned x, y;
+/*	fprintf(stderr,"Writing scanlines for x0/y0/x1/y1: %d/%d/%d/%d\n", xPos, yPos,xPos + image->comps[0].w,yPos + image->comps[0].h);*/
+	for(y = yPos; y < yPos + image->comps[0].h && y < shared_resource->y1; y++) {
+		for(x = xPos; x < xPos + image->comps[0].w && x < shared_resource->x1; x++) {
+			unsigned pix = (x - xPos) + ((y - yPos) * image->comps[0].w);
 			if(shared_resource->num_comps < 3) {
-				shared_resource->scanlines[y].rgb[x] = image->comps[0].data[i];
+				shared_resource->scanlines[y].rgb[x] = image->comps[0].data[pix];
 			} else {
-				shared_resource->scanlines[y].rgb[x*shared_resource->num_comps] = image->comps[0].data[i];
-				shared_resource->scanlines[y].rgb[x*shared_resource->num_comps+1] = image->comps[1].data[i];
-				shared_resource->scanlines[y].rgb[x*shared_resource->num_comps+2] = image->comps[2].data[i];
+				shared_resource->scanlines[y].rgb[x*shared_resource->num_comps] = image->comps[0].data[pix];
+				shared_resource->scanlines[y].rgb[x*shared_resource->num_comps+1] = image->comps[1].data[pix];
+				shared_resource->scanlines[y].rgb[x*shared_resource->num_comps+2] = image->comps[2].data[pix];
 			}
 		}
 		shared_resource->scanlines[y].chunks_done++;
@@ -104,6 +106,11 @@ static void *processTile(void *args) {
 			opj_res_t res = opj_init(((thr_args_t*)args)->cachefile, params);
 			opj_get_decoded_tile(res.l_codec, res.l_stream, res.image, tile_index);
 			buffer_scanlines(res.image, tile_index, ((thr_args_t*)args)->shared_resource);
+/*			char foo[40];
+			sprintf(foo, "/var/cache/jp2/tile-%d.jpg", tile_index);
+			FILE *fp = fopen(foo, "wb");
+			writeJPEG(&res, 0, 0, 0, 0, 3, fp);
+			fclose(fp);*/
 			opj_cleanup(&res);
 		}
 		((thr_args_t*)args)->shared_resource->tiles_done++;
@@ -185,37 +192,25 @@ static int get_decoded_area(urlparams_t *urlparams, shared_image_resource_t *sha
 	decoder_resources = opj_init(cachefile, &decoder_parameters);
 	opj_codestream_info_v2_t* info = opj_get_cstr_info(decoder_resources.l_codec);
 
-	urlparams->h = reduce(decoder_resources.image->y1, decoder_parameters.cp_reduce);
-	urlparams->w = reduce(decoder_resources.image->x1, decoder_parameters.cp_reduce);
+	if(urlparams->h == 0) { urlparams->h = reduce(decoder_resources.image->y1, decoder_parameters.cp_reduce); }
+	if(urlparams->w == 0) { urlparams->w = reduce(decoder_resources.image->x1, decoder_parameters.cp_reduce); }
 	
 	shared_resource->y1 = urlparams->h;
 	shared_resource->x1 = urlparams->w; 
 	shared_resource->tw = reduce(info->tdx, decoder_parameters.cp_reduce);
 	shared_resource->th = reduce(info->tdy, decoder_parameters.cp_reduce);
-	/*ceil(cw / (jp2Header.tdx * scale)) + 1;*/
-	shared_resource->tilesX = (unsigned) ceil((double)shared_resource->x1 / (double)shared_resource->tw) + 1;
-	shared_resource->tilesY = (unsigned) ceil((double)shared_resource->y1 / (double)shared_resource->th) + 1;
+	shared_resource->tilesX = (unsigned) ceil((double)shared_resource->x1 / (double)shared_resource->tw);
+	shared_resource->tilesY = (unsigned) ceil((double)shared_resource->y1 / (double)shared_resource->th);
+	shared_resource->sourceTilesX = info->tw;
+
+	unsigned tileX = (unsigned) floor((double) urlparams->x / (double)shared_resource->tw);
+	unsigned tileY = (unsigned) floor((double) urlparams->y / (double)shared_resource->th);
+
 	if(shared_resource->tilesX > info->tw) { shared_resource->tilesX = info->tw; }
 	if(shared_resource->tilesY > info->th) { shared_resource->tilesY = info->th; }
 
-	unsigned n = 0;
-	pthread_t t[SPAWN_THREADS];
-	thr_args_t args[SPAWN_THREADS];
-
-	shared_resource->tiles_done = 0;
-	shared_resource->num_comps = decoder_resources.image->numcomps;
-	shared_resource->scanlines = malloc(sizeof(chunked_scanline_t) * (shared_resource->y1+1));
-
-	unsigned y;
-	for(y = 0; y < shared_resource->y1; y++) {
-		shared_resource->scanlines[y].chunks_done = 0;
-		shared_resource->scanlines[y].n_chunks = shared_resource->x1 / shared_resource->tw;
-		shared_resource->scanlines[y].rgb = malloc(sizeof(JSAMPLE) * (shared_resource->x1+1) * shared_resource->num_comps);
-	}
-
-	opj_destroy_cstr_info(&info);
-	opj_cleanup(&decoder_resources);
-
+	fprintf(stderr, " x1 / y1: %d / %d\n", shared_resource->x1, shared_resource->y1);
+	fprintf(stderr, " tilesX / tilesY: %d / %d\n", shared_resource->tilesX, shared_resource->tilesY);
 /*
 			var tileS = scale / reduce(1.0, reduction);
 			var ch = canvas.height;
@@ -232,19 +227,47 @@ static int get_decoded_area(urlparams_t *urlparams, shared_image_resource_t *sha
 			if(tileX + tilesX > jp2Header.tw)  { tilesX = jp2Header.tw - tileX; }
 			if(tileY + tilesY > jp2Header.th)  { tilesY = jp2Header.th - tileY; }
 */
+
+
+	unsigned n = 0;
+	pthread_t t[SPAWN_THREADS];
+	thr_args_t args[SPAWN_THREADS];
+
+	shared_resource->tiles_done = 0;
+	shared_resource->num_comps = decoder_resources.image->numcomps;
+	shared_resource->scanlines = malloc(sizeof(chunked_scanline_t) * (shared_resource->y1+1));
+
+	unsigned y;
+	for(y = 0; y < shared_resource->y1; y++) {
+		shared_resource->scanlines[y].chunks_done = 0;
+		shared_resource->scanlines[y].n_chunks = shared_resource->x1 / shared_resource->tw;
+		shared_resource->scanlines[y].rgb = malloc(sizeof(JSAMPLE) * (shared_resource->x1+1) * shared_resource->num_comps);
+	}
+
+
+
+	unsigned cur_thread, x;
+	unsigned tiles_per_thread = 1 + ((shared_resource->tilesX * shared_resource->tilesY) / SPAWN_THREADS);
 	for(n = 0; n < SPAWN_THREADS; n++) {
-		unsigned tile_index_start = (n * shared_resource->tilesX * shared_resource->tilesY) / SPAWN_THREADS;
-		unsigned tile_index_end = ((n+1) * shared_resource->tilesX * shared_resource->tilesY) / SPAWN_THREADS;
 		args[n].shared_resource = shared_resource;
 		args[n].cachefile = cachefile;
-		args[n].n_tiles = tile_index_end - tile_index_start;
-		args[n].tiles = malloc(sizeof(unsigned) * args[n].n_tiles);
-		unsigned tile_index, i;
-		for(i = 0, tile_index = tile_index_start; tile_index < tile_index_end; i++, tile_index++) {
-			args[n].tiles[i] = tile_index;
-			fprintf(stderr, "start/end/n_tiles/tile: %d/%d/%d/%d\n", tile_index_start, tile_index_end, args[n].n_tiles, args[n].tiles[i]);
-		}
 		args[n].params = &decoder_parameters;
+		args[n].n_tiles = 0;
+		args[n].tiles = malloc(sizeof(unsigned) * tiles_per_thread);
+	}
+
+	for(cur_thread = 0, x = tileX; x < tileX + shared_resource->tilesX; x++) {
+		for(y = tileY; y < tileY + shared_resource->tilesY; y++) {
+			unsigned tile_index = x + (y * info->tw);
+			args[cur_thread].tiles[args[cur_thread].n_tiles++] = tile_index;
+			if(++cur_thread == SPAWN_THREADS) { cur_thread = 0; }
+		}
+	}
+
+	opj_destroy_cstr_info(&info);
+	opj_cleanup(&decoder_resources);
+
+	for(n = 0; n < SPAWN_THREADS; n++) {
 		pthread_create(&t[n], NULL, processTile, &args[n]);
 	}
 
