@@ -27,7 +27,7 @@
 #include "lib/log.h"
 #include "lib/opj_res.h"
 
-#define SPAWN_THREADS 7
+#define SPAWN_THREADS 3
 
 #define MAX_ARGS 6
 
@@ -66,8 +66,8 @@ typedef struct shared_image_resource {
 typedef struct thr_arg {
 	opj_dparameters_t *params;
 	shared_image_resource_t *shared_resource;
-	unsigned tile_index_start;
-	unsigned tile_index_end;
+	unsigned *tiles;
+    unsigned n_tiles;
 	char *cachefile;
 } thr_args_t;
 
@@ -95,10 +95,11 @@ static void buffer_scanlines(opj_image_t *image, unsigned tile_index, shared_ima
 }
 
 static void *processTile(void *args) {
-		unsigned tile_index_start = ((thr_args_t*)args)->tile_index_start;
-		unsigned tile_index_end = ((thr_args_t*)args)->tile_index_end;
-		unsigned tile_index;
-		for(tile_index = tile_index_start; tile_index < tile_index_end; tile_index++) {
+		unsigned *tiles = ((thr_args_t*)args)->tiles;
+		unsigned n_tiles = ((thr_args_t*)args)->n_tiles;
+		unsigned tile_index, i;
+		for(i = 0; i < n_tiles; i++) {
+			tile_index = tiles[i];
 			opj_dparameters_t *params = ((thr_args_t*)args)->params;
 			opj_res_t res = opj_init(((thr_args_t*)args)->cachefile, params);
 			opj_get_decoded_tile(res.l_codec, res.l_stream, res.image, tile_index);
@@ -106,6 +107,7 @@ static void *processTile(void *args) {
 			opj_cleanup(&res);
 		}
 		((thr_args_t*)args)->shared_resource->tiles_done++;
+		free(((thr_args_t*)args)->tiles);
 		pthread_exit(NULL);
 }
 
@@ -214,11 +216,34 @@ static int get_decoded_area(urlparams_t *urlparams, shared_image_resource_t *sha
 	opj_destroy_cstr_info(&info);
 	opj_cleanup(&decoder_resources);
 
+/*
+			var tileS = scale / reduce(1.0, reduction);
+			var ch = canvas.height;
+			var cw = canvas.width;
+			if(rotation == 90 || rotation == 270) { var swp = cw; cw = ch; ch = swp; }
+			var tilesX = Math.ceil(cw / (jp2Header.tdx * scale)) + 1;
+			var tilesY = Math.ceil(ch / (jp2Header.tdy * scale)) + 1;
+			var tileX = Math.floor(-xPos / (jp2Header.tdx * scale));
+			var tileY = Math.floor(-yPos / (jp2Header.tdy * scale));
+
+			if(tileX < 0) { tileX = 0; }
+			if(tileY < 0) { tileY = 0; }
+
+			if(tileX + tilesX > jp2Header.tw)  { tilesX = jp2Header.tw - tileX; }
+			if(tileY + tilesY > jp2Header.th)  { tilesY = jp2Header.th - tileY; }
+*/
 	for(n = 0; n < SPAWN_THREADS; n++) {
+		unsigned tile_index_start = (n * shared_resource->tilesX * shared_resource->tilesY) / SPAWN_THREADS;
+		unsigned tile_index_end = ((n+1) * shared_resource->tilesX * shared_resource->tilesY) / SPAWN_THREADS;
 		args[n].shared_resource = shared_resource;
 		args[n].cachefile = cachefile;
-		args[n].tile_index_start = (n * shared_resource->tilesX * shared_resource->tilesY) / SPAWN_THREADS;
-		args[n].tile_index_end = ((n+1) * shared_resource->tilesX * shared_resource->tilesY) / SPAWN_THREADS;
+		args[n].n_tiles = tile_index_end - tile_index_start;
+		args[n].tiles = malloc(sizeof(unsigned) * args[n].n_tiles);
+		unsigned tile_index, i;
+		for(i = 0, tile_index = tile_index_start; tile_index < tile_index_end; i++, tile_index++) {
+			args[n].tiles[i] = tile_index;
+			fprintf(stderr, "start/end/n_tiles/tile: %d/%d/%d/%d\n", tile_index_start, tile_index_end, args[n].n_tiles, args[n].tiles[i]);
+		}
 		args[n].params = &decoder_parameters;
 		pthread_create(&t[n], NULL, processTile, &args[n]);
 	}
