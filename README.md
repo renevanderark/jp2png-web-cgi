@@ -6,7 +6,6 @@ A jp2 decoder and PNG encoder based on CGI using openjpeg
 Demo:
 http://openjpeg.kbresearch.nl/jp2demo2/index.html?urn=ddd:010461485:mpeg21:p001:image
 
-
 tested on [openjpeg2.0](http://code.google.com/p/openjpeg/downloads/detail?name=openjpeg-2.0.0.tar.gz&can=2&q=)
 
 
@@ -35,11 +34,20 @@ AFTER INSTALLATION
 ==================
 
 After successful installation (sudo make install) the above binaries will have been copied to:
-- /usr/lib/cgi-bin/jp2
+- /usr/lib/cgi-bin/jp2.cgi
 - /usr/local/bin/jp2-cache-clean
 
 To check for success try the following url (should respond with a valid JSON encoded error: "No resource specified"):
-- http://localhost/cgi-bin/jp2
+- http://localhost/cgi-bin/jp2.cgi
+ 
+As per your apache2 configuration it might be necessary to add this (very insecure) entry to you httpd.conf or apache2.conf or suchlike:
+
+```xml
+<Directory "/usr/lib/cgi-bin">
+    Options +ExecCGI
+</Directory>
+```
+
 
 
 CACHING
@@ -52,7 +60,7 @@ To change the caching location an environment variable needs to be configured th
 - SetEnv JP2_CACHEDIR "/path/to/cache"
 
 Now the following url display a PNG file decoded from the sample image hosted on github:
-- http://localhost/cgi-bin/jp2?u=https%3A%2F%2Fgithub.com%2Frenevanderark%2Fjp2png-web-cgi%2Fblob%2Fmaster%2Fballoon.jp2%3Fraw%3Dtrue&t=1&r=3
+- http://localhost/cgi-bin/jp2.cgi?u=https%3A%2F%2Fgithub.com%2Frenevanderark%2Fjp2png-web-cgi%2Fblob%2Fmaster%2Fballoon.jp2%3Fraw%3Dtrue&t=1&r=3
 
 Keep your cache dir clean. That's what the other binary is for. Test it out like so:
 - ./jp2-cache-clean
