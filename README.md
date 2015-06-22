@@ -3,6 +3,8 @@ jp2png-web-cgi
 
 A jp2 decoder and PNG encoder based on CGI using openjpeg
 
+-Demo:
+-http://openjpeg.kbresearch.nl/jp2demo2/index.html?urn=ddd:010461485:mpeg21:p001:image
 
 tested on [openjpeg2.0](http://code.google.com/p/openjpeg/downloads/detail?name=openjpeg-2.0.0.tar.gz&can=2&q=)
 
