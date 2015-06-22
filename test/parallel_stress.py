@@ -45,7 +45,7 @@ if(len(sys.argv) > 1 and sys.argv[1] == "--save-response"):
 print("Executing parallel full image processing at resolution level 5")
 while paper < num_papers:
 	image_url = "http://resolver.kb.nl/resolve?urn=ddd:0" + str(10691742 + paper) + ":mpeg21:p001:image"
-	viewer_url = "http://localhost/cgi-bin/jp2?i=1&u=" + urllib.parse.quote(image_url) + "&r=5"
+	viewer_url = "http://localhost/cgi-bin/jp2.cgi?i=1&u=" + urllib.parse.quote(image_url) + "&r=5"
 	task = Task()
 	outfile = False
 	if(saveOutput):
