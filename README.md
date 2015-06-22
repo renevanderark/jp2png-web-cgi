@@ -61,7 +61,7 @@ To change the caching location an environment variable needs to be configured th
 - SetEnv JP2_CACHEDIR "/path/to/cache"
 
 Now the following url display a PNG file decoded from the sample image hosted on github:
-- http://localhost/cgi-bin/jp2?u=https%3A%2F%2Fgithub.com%2Frenevanderark%2Fjp2png-web-cgi%2Fblob%2Fmaster%2Fballoon.jp2%3Fraw%3Dtrue&t=1&r=3
+- http://localhost/cgi-bin/jp2.cgi?u=https%3A%2F%2Fgithub.com%2Frenevanderark%2Fjp2png-web-cgi%2Fblob%2Fmaster%2Fballoon.jp2%3Fraw%3Dtrue&t=1&r=3
 
 Keep your cache dir clean. That's what the other binary is for. Test it out like so:
 - ./jp2-cache-clean
