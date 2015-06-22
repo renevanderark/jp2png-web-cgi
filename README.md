@@ -35,11 +35,20 @@ AFTER INSTALLATION
 ==================
 
 After successful installation (sudo make install) the above binaries will have been copied to:
-- /usr/lib/cgi-bin/jp2
+- /usr/lib/cgi-bin/jp2.cgi
 - /usr/local/bin/jp2-cache-clean
 
 To check for success try the following url (should respond with a valid JSON encoded error: "No resource specified"):
-- http://localhost/cgi-bin/jp2
+- http://localhost/cgi-bin/jp2.cgi
+ 
+As per your apache2 configuration it might be necessary to add this (very insecure) entry to you httpd.conf or apache2.conf or suchlike:
+
+```xml
+<Directory "/usr/lib/cgi-bin">
+    Options +ExecCGI
+</Directory>
+```
+
 
 
 CACHING
