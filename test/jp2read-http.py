@@ -61,9 +61,9 @@ class Jp2ReadHTTPTest(unittest.TestCase):
 		self.assertEqual(self.headers[1], 'Pragma: public')
 		self.assertEqual(self.headers[2], 'Cache-Control: max-age=360000')
 		header = self.headers[3][:13]
-		timestamp = self.headers[3][15:]
+		timestamp = self.headers[3][15:40]
 		self.assertEqual(header, 'Last-Modified')
-		tm = datetime.datetime.strptime(timestamp, "%a, %d %b %Y %H:%M:%S GMT")
+		tm = datetime.datetime.strptime(timestamp, "%a, %d %b %Y %H:%M:%S")
 		today = datetime.date.today()
 		self.assertEqual(today.day, tm.day, "Last modified header day should match today")
 		self.assertEqual(today.month, tm.month, "Last modified header month should match this month")
@@ -83,13 +83,13 @@ class Jp2ReadHTTPTest(unittest.TestCase):
 		self.assertEqual(jp2h['num_res'], 6, "balloon.jp2 has 6 resolution levels (num_res=6)")
 
 	def runJP2HeaderTestJSONP(self):
-		jp2h = json.loads(self.results[153:len(self.results)-3].decode('utf-8'))
+		jp2h = json.loads(self.results[154:len(self.results)-3].decode('utf-8'))
 		self.runJP2HeaderTest(jp2h)
-		self.assertEqual(self.results[138:153], "jsonp_callback(")
+		self.assertEqual(self.results[139:154], "jsonp_callback(")
 		self.assertEqual(self.results[len(self.results)-3:], ");\n")
 
 	def runPNGTest(self):
-		bytes = self.results[130:]
+		bytes = self.results[131:]
 		png = Image.open(io.BytesIO(bytes))
 		width, height = png.size
 		pixels = list(png.getdata())
@@ -99,7 +99,7 @@ class Jp2ReadHTTPTest(unittest.TestCase):
 		del png
 
 	def runPNGCropTest(self):
-		bytes = self.results[130:]
+		bytes = self.results[131:]
 		png = Image.open(io.BytesIO(bytes))
 		w, h = png.size
 		pixels = list(png.getdata())
@@ -109,7 +109,7 @@ class Jp2ReadHTTPTest(unittest.TestCase):
 		del png
 
 	def runPNGoutOfBoundsTest(self):
-		bytes = self.results[130:]
+		bytes = self.results[131:]
 		png = Image.open(io.BytesIO(bytes))
 		w, h = png.size
 		pixels = list(png.getdata())
@@ -119,7 +119,7 @@ class Jp2ReadHTTPTest(unittest.TestCase):
 		del png
 
 	def runPNGoutOfBoundsTest2(self):
-		bytes = self.results[130:]
+		bytes = self.results[131:]
 		png = Image.open(io.BytesIO(bytes))
 		w, h = png.size
 		pixels = list(png.getdata())
@@ -129,7 +129,7 @@ class Jp2ReadHTTPTest(unittest.TestCase):
 		del png
 
 	def runPNGLastTileDimensionsTest(self):
-		bytes = self.results[130:]
+		bytes = self.results[131:]
 		png = Image.open(io.BytesIO(bytes))
 		w, h = png.size
 		pixels = list(png.getdata())
@@ -138,7 +138,7 @@ class Jp2ReadHTTPTest(unittest.TestCase):
 		del png
 
 	def runPNGCropTest2(self):
-		bytes = self.results[130:]
+		bytes = self.results[131:]
 		png = Image.open(io.BytesIO(bytes))
 		w, h = png.size
 		pixels = list(png.getdata())
