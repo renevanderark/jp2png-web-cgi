@@ -81,6 +81,7 @@ The cgi scripts supports the following parameters (setting either 't' or 'u' sho
 - 'w': width of the decoded tile (x+w should not exceed the total width of the tile)
 - 'h': height of the decoded tile (y+h should not exceed the total height of the tile)
 - 'n': number of compositions of the tile (max supported is shown in the jp2 header; 1 becomes grayscale in all cases)
+- 'j': when added the service returns a JPEG encoded tile in stead of a PNG encoded tile
 - 'c(allback)': jsonp callback for remote origin website JSON support
 
 DEMO
