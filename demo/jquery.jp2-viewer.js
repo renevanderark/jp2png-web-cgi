@@ -62,8 +62,8 @@ window.requestAnimFrame = (function(){
 		function drawRect() {
 			_self.trigger("refresh");
 			rect = {
-				x: Math.floor(viewerPosition.x > 0 ? 0 : -(viewerPosition.x) / viewerScale),
-				y: Math.floor(viewerPosition.y > 0 ? 0 : -(viewerPosition.y) / viewerScale),
+				x: Math.floor((viewerPosition || {x:0}).x > 0 ? 0 : -(viewerPosition.x) / viewerScale),
+				y: Math.floor((viewerPosition || {y:0}).y > 0 ? 0 : -(viewerPosition.y) / viewerScale),
 				w: Math.ceil(viewerDimensions.w / viewerScale),
 				h: Math.ceil(viewerDimensions.h / viewerScale)
 			};
@@ -87,6 +87,16 @@ window.requestAnimFrame = (function(){
 		var curX;
 		var curY;
 		var dragging = false;
+		var _self = this,
+			lastPos = false,
+			touchmap = {
+				startPos: false,
+				positions: [],
+				tapStart: 0,
+				lastTap: 0,
+				pinchDelta: 0,
+				pinchDistance: 0
+			};
 
 		this.on("mousedown", function(e) {
 			dragging = true;
@@ -122,6 +132,93 @@ window.requestAnimFrame = (function(){
 			}
 			return false;
 		});
+
+		function getBox() {
+			return {
+				y0: $(_self).offset().top - $(window).scrollTop(),
+				x0: $(_self).offset().left,
+				y1: $(_self).offset().top + $(this).height() - $(window).scrollTop(),
+				x1: $(_self).offset().left + $(this).width()
+			};
+		}
+
+		this.on("touchstart", function (e) {
+			var touches = e.originalEvent.touches,
+				box;
+			if (touches.length === 1) {
+				touchmap.tapStart = new Date().getTime();
+				box = getBox();
+				touchmap.startPos = {x: touches[0].pageX  - box.x0, y: touches[0].pageY - box.y0};
+			}
+			e.preventDefault();
+			e.stopPropagation();
+			return false;
+		});
+		
+		this.on("touchend", function (e) {
+			var touches = e.originalEvent.touches,
+				box;
+			$(this).trigger('moveBy', [{x: 0, y: 0}, true]);
+			lastPos = false;
+			if (new Date().getTime() - touchmap.tapStart < 200) {
+				touchmap.lastTap = new Date().getTime();
+				touchmap.tapStart = 0;
+			}
+
+			touchmap.startPos = false;
+			e.preventDefault();
+			e.stopPropagation();
+			return false;
+		});
+
+		this.on("touchmove", function (e) {
+			e.preventDefault();
+			var touches = e.originalEvent.touches,
+				i,
+				cur,
+				oldD,
+				sHeur,
+				movement,
+				box;
+
+			for (i = 0; i < touches.length; i++) {
+				cur = {x: touches[i].pageX, y: touches[i].pageY};
+				touchmap.positions[i] = cur;
+			}
+
+			if (touches.length === 2) {
+				oldD = touchmap.pinchDistance;
+				touchmap.pinchDistance = parseInt(Math.sqrt(
+					(
+						(touchmap.positions[0].x - touchmap.positions[1].x) *
+						(touchmap.positions[0].x - touchmap.positions[1].x)
+					) + (
+						(touchmap.positions[0].y - touchmap.positions[1].y) *
+						(touchmap.positions[0].y - touchmap.positions[1].y)
+					)
+				), 10);
+				touchmap.pinchDelta = oldD - touchmap.pinchDistance;
+				if (touchmap.pinchDelta < 20 && touchmap.pinchDelta > -20) {
+					sHeur = 1.0 - (touchmap.pinchDelta * 0.01);
+					$(this).trigger('scaleBy', [sHeur, false]);
+				}
+			} else if (touches.length === 1) {
+				if (lastPos !== false) {
+					movement = {
+						x: -(touchmap.positions[0].x - lastPos.x),
+						y: -(touchmap.positions[0].y - lastPos.y)
+					};
+
+					$(this).trigger('moveBy', [movement, false]);
+				}
+				lastPos = {x: touchmap.positions[0].x, y: touchmap.positions[0].y};
+			}
+
+			e.preventDefault();
+			e.stopPropagation();
+			return false;
+		});
+
 		return this;
 	};
 
