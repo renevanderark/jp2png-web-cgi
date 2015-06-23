@@ -1,16 +1,64 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!doctype html>
 <html>
 <head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <style>
+	html {
+	  box-sizing: border-box;
+	  height: 100%;
+	}
+	*, *:before, *:after {
+	  box-sizing: inherit;
+	}
+	body { margin: 0; padding: 0; height: 100%;}
 	a {text-decoration: underline; cursor: pointer; color: blue}
 	th { width: 400px; text-align: left; }
 	td { 
 		vertical-align: top; 
 		white-space: nowrap;
 	}
+	canvas#big {
+		width: 50%;
+		height: 100%;
+		float: left;
+		border: 1px solid black;
+		background-color: #aaa;
+	}
+	canvas#mini {
+		float: left; border: 1px solid
+	}
+	#suggestions {
+		width: calc(50% - 140px);
+		float: left;
+		margin-left: 10px;
+	}
 	div#buffering-msg {
 		position: absolute; z-index: 999; top: 150px; left: 200px; min-height: 100px; background-color: white; text-align: center; padding: 10px;
 		display: none;
+	}
+
+	@media only screen and (max-width: 1024px) {
+		canvas#mini {
+			display: none;
+		}
+		#suggestions {
+			margin: 0;
+			width: 100%;
+			clear: left;
+		}
+
+		canvas#big {
+			height: 90%;
+			width: 100%;
+		}
+		button {
+			float: right;
+		}
+		h2 {
+			width: 50%;
+			margin: 0;
+		}
 	}
 </style>
 
@@ -64,6 +112,8 @@
 			};
 
 			$("canvas#big")
+				.attr("height", $("canvas#big").height())
+				.attr("width", $("canvas#big").width())
 				.jp2Viewer($.extend({miniMap: $("canvas#mini")}, baseOpts))
 				.jp2ViewerEvents();
 
@@ -72,34 +122,35 @@
 				.jp2MinimapEvents({ viewer: $("canvas#big")});
 		}
 		doeiswaturns()
+		$(window).on("resize", function() {
+
+			$("canvas#big")
+				.attr("height", $("canvas#big").height())
+				.attr("width", $("canvas#big").width())
+				.trigger("reinit");
+		});
 	});
+
+
 
 </script>
 </head>
 
 <body>
-	<canvas id="big" width="800" height="500" style="float: left; border: 1px solid">
+	<canvas id="big">
 	</canvas>
-	<canvas id="mini" width="150" height="150" style="float: left; border: 1px solid">
+	<canvas id="mini" width="150" height="150" >
 	</canvas>
 	<div id="buffering-msg">
 		Buffering, please wait<br /><img src="spinner.gif" />
 	</div>
-	<button onclick='$("canvas#big").trigger("rotateBy", 90)'>CW</button>
-	<button onclick='$("canvas#big").trigger("rotateBy", -90)'>CCW</button>
-	<br>
-	<div style="float: left; width: 350px;">
-		<table>
-		<tr><th>Newspapers</th><th>Periodicals</th>
-		<tr>
-		<td>
+	<div id="suggestions">
+		<button onclick='$("canvas#big").trigger("rotateBy", 90)'>CW</button>
+		<button onclick='$("canvas#big").trigger("rotateBy", -90)'>CCW</button>
+		<h2>Newspapers</h2>
 		<div class="is-wat-urns" id="kranten"></div>
-		</td>
-		<td>
+		<h2>Periodicals</h2>
 		<div class="is-wat-urns" id="tijdschriften"></div>
-		</td>
-		</tr>
-		</table>
 	</div>
 </body>
 </html>

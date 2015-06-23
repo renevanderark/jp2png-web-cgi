@@ -313,6 +313,11 @@ window.requestAnimFrame = (function(){
 			ctx.stroke();
 		});
 
+		this.on("reinit", function() {
+			bufcan.width = canvas.width;
+			bufcan.height = canvas.height;
+			initialize();
+		});
 		function setRotation(rot) {
 			rotation = rot;
 			if(rotation == 90 || rotation == 270) {
