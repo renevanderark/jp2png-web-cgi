@@ -7,6 +7,7 @@ import urllib.parse
 import time
 import sys
 import os
+import getopt
 
 class Task(urllib.request.HTTPHandler,urllib.request.HTTPErrorProcessor):
 	def setup(self, url, saveOutput):
@@ -36,11 +37,19 @@ paper = 0
 openThreads = []
 executedTasks = []
 saveOutput = False
-if(len(sys.argv) > 1 and sys.argv[1] == "--save-response"):
-	saveOutput = True
-	if(os.path.isdir("./out") == False):
-		os.mkdir("./out")
-	print("Saving responses to dir ./out")
+
+
+if(len(sys.argv) > 1):
+	args = sys.argv[1:]
+	for i in range(len(args)):
+		if(args[i] == "--save-response"):
+			saveOutput = True
+			if(os.path.isdir("./out") == False):
+				os.mkdir("./out")
+			print("Saving responses to dir ./out")
+		elif(int(args[i]) > 0 and int(args[i]) < 100):
+			res = int(args[i])
+
 
 print("Executing parallel full image processing at resolution level 5")
 while paper < num_papers:
@@ -86,7 +95,7 @@ while page < num_pages:
 	image_url = "http://resolver.kb.nl/resolve?urn=ddd:010691742:mpeg21:p" + str(page + 1).zfill(3) + ":image"
 	tile = 0
 	while tile < num_tiles:
-		viewer_url = "http://localhost/cgi-bin/jp2?t=" + str(tile) + "&u=" + urllib.parse.quote(image_url) + "&r=" + str(res)
+		viewer_url = "http://localhost/cgi-bin/jp2.cgi?t=" + str(tile) + "&u=" + urllib.parse.quote(image_url) + "&r=" + str(res)
 		task = Task()
 		outfile = False
 		if(saveOutput):
